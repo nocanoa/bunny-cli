@@ -1,4 +1,4 @@
-# @bunnynet/cli
+# @bunny.net/cli
 
 Command-line interface for [bunny.net](https://bunny.net) — manage databases, Edge Scripts, and more from your terminal.
 
@@ -304,9 +304,9 @@ bunny apps deploy
 bunny apps deploy --image ghcr.io/myorg/api:v1.2
 ```
 
-| Flag      | Description                                          |
-| --------- | ---------------------------------------------------- |
-| `--image` | Container image to deploy (skips Dockerfile build)   |
+| Flag      | Description                                        |
+| --------- | -------------------------------------------------- |
+| `--image` | Container image to deploy (skips Dockerfile build) |
 
 #### `bunny apps pull` / `bunny apps push`
 
@@ -359,9 +359,9 @@ bunny apps env remove OLD_VAR
 bunny apps env pull
 ```
 
-| Flag          | Description                        |
-| ------------- | ---------------------------------- |
-| `--container` | Target container (default: primary)|
+| Flag          | Description                         |
+| ------------- | ----------------------------------- |
+| `--container` | Target container (default: primary) |
 
 #### `bunny apps endpoints`
 
@@ -489,12 +489,17 @@ bunny scripts show
 
 ## Development
 
+This is a Bun workspace monorepo with two packages:
+
+- `packages/api/` (`@bunny.net/api`) — standalone API client SDK
+- `packages/cli/` (`@bunny.net/cli`) — the CLI
+
 ```bash
 # Run directly
-bun run src/index.ts <command>
+bun run packages/cli/src/index.ts <command>
 
 # Watch mode
-bun --watch src/index.ts
+bun --watch packages/cli/src/index.ts
 
 # Type check
 bun run typecheck
