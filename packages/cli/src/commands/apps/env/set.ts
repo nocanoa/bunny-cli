@@ -4,7 +4,7 @@ import { defineCommand } from "../../../core/define-command.ts";
 import { UserError } from "../../../core/errors.ts";
 import { logger } from "../../../core/logger.ts";
 import { spinner } from "../../../core/ui.ts";
-import { resolveAppId, resolveContainerId } from "../toml.ts";
+import { resolveAppId, resolveContainerId } from "../config.ts";
 import { clientOptions } from "../../../core/client-options.ts";
 
 const COMMAND = "set <key> <value>";
@@ -35,7 +35,7 @@ export const appsEnvSetCommand = defineCommand<SetArgs>({
       })
       .option("id", {
         type: "string",
-        describe: "App ID (overrides bunny.toml)",
+        describe: "App ID (overrides bunny.jsonc)",
       })
       .option("container", {
         type: "string",

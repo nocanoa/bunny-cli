@@ -4,8 +4,7 @@ import { defineCommand } from "../../../core/define-command.ts";
 import { UserError } from "../../../core/errors.ts";
 import { logger } from "../../../core/logger.ts";
 import { spinner } from "../../../core/ui.ts";
-import { resolveAppId } from "../toml.ts";
-import { loadBunnyToml, parseImageRef } from "../toml.ts";
+import { resolveAppId, loadConfig, parseImageRef } from "../config.ts";
 import { clientOptions } from "../../../core/client-options.ts";
 
 const COMMAND = "start <name>";
@@ -24,17 +23,17 @@ export const appsAccessoryStartCommand = defineCommand<StartArgs>({
     yargs
       .positional("name", {
         type: "string",
-        describe: 'Accessory name (from bunny.toml) or "all"',
+        describe: 'Accessory name (from bunny.jsonc) or "all"',
         demandOption: true,
       })
       .option("id", {
         type: "string",
-        describe: "App ID (overrides bunny.toml)",
+        describe: "App ID (overrides bunny.jsonc)",
       }),
 
   handler: async ({ name, id: rawId, profile, output, verbose, apiKey }) => {
     const appId = resolveAppId(rawId);
-    const toml = loadBunnyToml();
+    const toml = loadConfig();
     const config = resolveConfig(profile, apiKey);
     const client = createMcClient(clientOptions(config, verbose));
 
@@ -44,7 +43,7 @@ export const appsAccessoryStartCommand = defineCommand<StartArgs>({
         : [name];
 
     if (accessoryNames.length === 0) {
-      throw new UserError("No accessories defined in bunny.toml.");
+      throw new UserError("No accessories defined in bunny.jsonc.");
     }
 
     // Fetch current app to check existing containers
@@ -64,7 +63,7 @@ export const appsAccessoryStartCommand = defineCommand<StartArgs>({
       const accConfig = toml.accessories?.[accName];
       if (!accConfig) {
         throw new UserError(
-          `Accessory "${accName}" not found in bunny.toml.`,
+          `Accessory "${accName}" not found in bunny.jsonc.`,
           `Available: ${Object.keys(toml.accessories ?? {}).join(", ")}`,
         );
       }

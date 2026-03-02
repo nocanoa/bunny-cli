@@ -3,7 +3,7 @@ import { resolveConfig } from "../../../config/index.ts";
 import { defineCommand } from "../../../core/define-command.ts";
 import { logger } from "../../../core/logger.ts";
 import { spinner } from "../../../core/ui.ts";
-import { resolveAppId } from "../toml.ts";
+import { resolveAppId } from "../config.ts";
 import { clientOptions } from "../../../core/client-options.ts";
 
 const COMMAND = "restart [name]";
@@ -26,7 +26,7 @@ export const appsAccessoryRestartCommand = defineCommand<RestartArgs>({
       })
       .option("id", {
         type: "string",
-        describe: "App ID (overrides bunny.toml)",
+        describe: "App ID (overrides bunny.jsonc)",
       }),
 
   handler: async ({ id: rawId, profile, output, verbose, apiKey }) => {

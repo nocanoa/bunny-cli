@@ -8,8 +8,8 @@ import { UserError } from "../../core/errors.ts";
 import { logger } from "../../core/logger.ts";
 import { spinner } from "../../core/ui.ts";
 import { promptRegistry } from "./docker.ts";
-import { saveBunnyToml, bunnyTomlExists } from "./toml.ts";
-import type { BunnyToml, ContainerConfig } from "./toml.ts";
+import { saveConfig, configExists } from "./config.ts";
+import type { BunnyAppConfig, ContainerConfig } from "./config.ts";
 import { clientOptions } from "../../core/client-options.ts";
 
 const COMMAND = "init";
@@ -17,7 +17,6 @@ const DESCRIPTION = "Initialize a new app config.";
 
 interface InitArgs {
   name?: string;
-  runtime?: string;
   image?: string;
 }
 
@@ -31,12 +30,6 @@ export const appsInitCommand = defineCommand<InitArgs>({
         type: "string",
         describe: "App name",
       })
-      .option("runtime", {
-        type: "string",
-        choices: ["shared", "reserved"],
-        default: "shared",
-        describe: "Runtime type (default: shared)",
-      })
       .option("image", {
         type: "string",
         describe: "Primary container image",
@@ -44,16 +37,15 @@ export const appsInitCommand = defineCommand<InitArgs>({
 
   handler: async ({
     name: rawName,
-    runtime: rawRuntime,
     image: rawImage,
     profile,
     output,
     verbose,
     apiKey,
   }) => {
-    if (bunnyTomlExists()) {
+    if (configExists()) {
       throw new UserError(
-        "A bunny.toml already exists in this directory.",
+        "A bunny.jsonc already exists in this directory.",
         "Use `bunny apps push` to sync changes or delete it first.",
       );
     }
@@ -71,8 +63,6 @@ export const appsInitCommand = defineCommand<InitArgs>({
       name = value;
     }
     if (!name) throw new UserError("App name is required.");
-
-    const runtime = (rawRuntime ?? "shared") as "shared" | "reserved";
 
     const config = resolveConfig(profile, apiKey);
     const client = createMcClient(clientOptions(config, verbose));
@@ -147,10 +137,9 @@ export const appsInitCommand = defineCommand<InitArgs>({
       throw new UserError("At least one region must be selected.");
     }
 
-    const toml: BunnyToml = {
+    const toml: BunnyAppConfig = {
       app: {
         name,
-        runtime,
         scaling: { min: 1, max: 1 },
         regions: {
           allowed: selectedRegions,
@@ -160,14 +149,14 @@ export const appsInitCommand = defineCommand<InitArgs>({
       },
     };
 
-    saveBunnyToml(toml);
+    saveConfig(toml);
 
     if (output === "json") {
       logger.log(JSON.stringify(toml, null, 2));
       return;
     }
 
-    logger.success("Config written to bunny.toml.");
+    logger.success("Config written to bunny.jsonc.");
     logger.dim("Run `bunny apps deploy` to create and deploy the app.");
   },
 });

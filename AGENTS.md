@@ -45,7 +45,8 @@ Bun replaces the entire Node.js toolchain. There are no separate tools for trans
 | `zod`            | Schema validation for config files and CLI input               |
 | `@libsql/client` | libSQL/Turso database client (used by `db shell`)              |
 | `openapi-fetch`  | Type-safe HTTP client generated from OpenAPI specs             |
-| `smol-toml`      | TOML v1 parser/serializer for `bunny.toml` config files        |
+| `jsonc-parser`   | JSONC parser for `bunny.jsonc` config files                    |
+| `smol-toml`      | TOML v1 parser (legacy `bunny.toml` fallback only)             |
 
 ### Dev dependencies
 
@@ -69,11 +70,12 @@ Bun replaces the entire Node.js toolchain. There are no separate tools for trans
 
 ## Project Structure
 
-This is a Bun workspace monorepo with three packages:
+This is a Bun workspace monorepo with four packages:
 
 - **`@bunny.net/api`** (`packages/api/`) — Standalone, type-safe API client SDK for bunny.net. Zero CLI dependencies. Publishable to npm.
+- **`@bunny.net/app-config`** (`packages/app-config/`) — Shared app configuration schemas (Zod), inferred types, JSON Schema generation, and API conversion functions. Used by the CLI and potentially other tools.
 - **`@bunny.net/database-shell`** (`packages/database-shell/`) — Standalone interactive SQL shell for libSQL databases. Framework-agnostic REPL, dot-commands, formatting, masking, and history.
-- **`@bunny.net/cli`** (`packages/cli/`) — The CLI. Depends on `@bunny.net/api` and `@bunny.net/database-shell`.
+- **`@bunny.net/cli`** (`packages/cli/`) — The CLI. Depends on `@bunny.net/api`, `@bunny.net/app-config`, and `@bunny.net/database-shell`.
 
 ```
 bunny-cli/
@@ -102,6 +104,19 @@ bunny-cli/
 │   │           ├── compute.d.ts
 │   │           ├── database.d.ts
 │   │           └── magic-containers.d.ts
+│   │
+│   ├── app-config/                        # @bunny.net/app-config package
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   ├── scripts/
+│   │   │   └── generate-schema.ts         # Generates JSON Schema from Zod schemas
+│   │   ├── generated/
+│   │   │   └── schema.json                # JSON Schema for bunny.jsonc (committed)
+│   │   └── src/
+│   │       ├── index.ts                   # Barrel export: schemas, types, conversion functions
+│   │       ├── schema.ts                  # Zod schemas + inferred types (BunnyAppConfig, etc.)
+│   │       ├── convert.ts                 # API ↔ config conversion (apiToConfig, configToAddRequest, configToPatchRequest)
+│   │       └── parse-image-ref.ts         # Docker image reference parser (parseImageRef)
 │   │
 │   ├── database-shell/                   # @bunny.net/database-shell package
 │   │   ├── package.json
@@ -144,22 +159,22 @@ bunny-cli/
 │           ├── commands/
 │           │   ├── apps/
 │           │   │   ├── index.ts          # defineNamespace("apps", ...) — registers all app commands
-│           │   │   ├── constants.ts      # Status/runtime label maps
-│           │   │   ├── toml.ts           # bunny.toml parse/write/convert (BunnyToml, apiToToml, tomlToApi, resolveAppId, resolveContainerId)
+│           │   │   ├── constants.ts      # Status label maps
+│           │   │   ├── config.ts         # bunny.jsonc file I/O, re-exports from @bunny.net/app-config (resolveAppId, resolveContainerId)
 │           │   │   ├── docker.ts         # Docker helpers (build, push, login, generateTag, promptRegistry)
-│           │   │   ├── init.ts           # Scaffold bunny.toml (detects Dockerfile, prompts for registry)
+│           │   │   ├── init.ts           # Scaffold bunny.jsonc (detects Dockerfile, prompts for registry)
 │           │   │   ├── list.ts           # List all apps
 │           │   │   ├── show.ts           # Show app details and overview
 │           │   │   ├── deploy.ts         # Deploy app (build from Dockerfile or use --image)
 │           │   │   ├── undeploy.ts       # Undeploy app
 │           │   │   ├── restart.ts        # Restart app
 │           │   │   ├── delete.ts         # Delete app
-│           │   │   ├── pull.ts           # Sync API → bunny.toml
-│           │   │   ├── push.ts           # Sync bunny.toml → API
+│           │   │   ├── pull.ts           # Sync API → bunny.jsonc
+│           │   │   ├── push.ts           # Sync bunny.jsonc → API
 │           │   │   ├── accessory/
 │           │   │   │   ├── index.ts      # defineNamespace("accessory", ...)
 │           │   │   │   ├── list.ts       # List accessory containers
-│           │   │   │   ├── start.ts      # Add container from bunny.toml + deploy
+│           │   │   │   ├── start.ts      # Add container from bunny.jsonc + deploy
 │           │   │   │   ├── stop.ts       # Remove container template
 │           │   │   │   └── restart.ts    # Restart all containers
 │           │   │   ├── env/
@@ -228,7 +243,7 @@ bunny-cli/
 
 ### Conventions
 
-- **Monorepo with Bun workspaces.** `packages/api/` is the standalone API client SDK; `packages/database-shell/` is the standalone SQL shell engine; `packages/cli/` is the CLI.
+- **Monorepo with Bun workspaces.** `packages/api/` is the standalone API client SDK; `packages/app-config/` provides shared Zod schemas, types, and API conversion functions for `bunny.jsonc`; `packages/database-shell/` is the standalone SQL shell engine; `packages/cli/` is the CLI.
 - **API clients use `ClientOptions`** — an options object with `apiKey`, `baseUrl`, `verbose`, `userAgent`, and `onDebug`. The CLI provides a `clientOptions(config, verbose)` helper to build this from `ResolvedConfig`.
 - **One command per file.** Each file in `commands/` exports a single command or namespace.
 - **Commands are grouped by domain** in subdirectories (`config/`, `db/`, `scripts/`).
@@ -620,19 +635,19 @@ bunny
 │       ├── create <name>  (alias: add)     Create a named profile with API key
 │       └── delete <name>                   Delete a named profile
 ├── apps
-│   ├── init            [--name] [--runtime] [--image]
-│   │                                       Scaffold bunny.toml (detects Dockerfile)
+│   ├── init            [--name] [--image]
+│   │                                       Scaffold bunny.jsonc (detects Dockerfile)
 │   ├── list            (alias: ls)         List all apps
 │   ├── show            [--id]              Show app details and overview
 │   ├── deploy          [--image]           Build + deploy (or deploy pre-built image)
 │   ├── undeploy        [--id] [--force]    Undeploy an app
 │   ├── restart         [--id]              Restart an app
 │   ├── delete          [--id] [--force]    Delete an app
-│   ├── pull            [--id] [--force]    Sync remote config to bunny.toml
-│   ├── push            [--id] [--dry-run]  Apply bunny.toml to remote
+│   ├── pull            [--id] [--force]    Sync remote config to bunny.jsonc
+│   ├── push            [--id] [--dry-run]  Apply bunny.jsonc to remote
 │   ├── accessory
 │   │   ├── list        [--id]              List accessory containers
-│   │   ├── start       <name|all> [--id]   Start accessory from bunny.toml
+│   │   ├── start       <name|all> [--id]   Start accessory from bunny.jsonc
 │   │   ├── stop        <name|all> [--force] Stop accessory container
 │   │   └── restart     [name] [--id]       Restart containers
 │   ├── env
@@ -906,18 +921,32 @@ The URL (e.g. `libsql://...bunnydb.net/`) does not directly contain the `db_id`.
 
 This pattern is separate from the `.bunny/` manifest system because databases are typically consumed via environment variables (e.g. in a `.env` file alongside an ORM), not linked to directories.
 
-### Future: `bunny.toml` (not yet implemented)
+### `bunny.jsonc` (app config)
 
-The `.bunny/` manifest and a potential `bunny.toml` serve different purposes:
+The `.bunny/` manifest and `bunny.jsonc` serve different purposes:
 
-| Concern   | `.bunny/script.json`                 | `bunny.toml` (future)                               |
+| Concern   | `.bunny/script.json`                 | `bunny.jsonc`                                       |
 | --------- | ------------------------------------ | --------------------------------------------------- |
-| Purpose   | Link directory to remote resource ID | Project config: entry point, build, deploy settings |
-| Author    | Machine (written by `link` command)  | Human (edited by developer)                         |
+| Purpose   | Link directory to remote resource ID | App config: name, containers, regions               |
+| Author    | Machine (written by `link` command)  | Human (edited by developer) + machine (init, pull)  |
 | Committed | No (gitignored)                      | Yes                                                 |
 | Shared    | No (per-developer)                   | Yes (team-wide)                                     |
 
-When `bunny.toml` is added, script type should be detected automatically from code exports (e.g. `fetch(req)` vs `fetch(req, next)`) rather than configured, to avoid drift.
+`bunny.jsonc` supports a `$schema` property for editor autocompletion, pointing to the JSON Schema generated by `@bunny.net/app-config`:
+
+```jsonc
+{
+  "$schema": "./node_modules/@bunny.net/app-config/generated/schema.json",
+  "app": {
+    "name": "my-app",
+    "container": { "image": "nginx:latest" }
+  }
+}
+```
+
+Schemas and types are defined in `@bunny.net/app-config` using Zod. The CLI's `config.ts` handles file I/O (parsing JSONC, validating with Zod, writing with `$schema` injection) and resolution helpers (`resolveAppId`, `resolveContainerId`).
+
+Legacy `bunny.toml` files are still loadable with a deprecation warning.
 
 ---
 

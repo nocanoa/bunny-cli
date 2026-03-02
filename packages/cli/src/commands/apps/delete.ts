@@ -3,7 +3,7 @@ import { resolveConfig } from "../../config/index.ts";
 import { defineCommand } from "../../core/define-command.ts";
 import { logger } from "../../core/logger.ts";
 import { confirm, spinner } from "../../core/ui.ts";
-import { resolveAppId } from "./toml.ts";
+import { resolveAppId } from "./config.ts";
 import { clientOptions } from "../../core/client-options.ts";
 
 const COMMAND = "delete";
@@ -22,7 +22,7 @@ export const appsDeleteCommand = defineCommand<DeleteArgs>({
     yargs
       .option("id", {
         type: "string",
-        describe: "App ID (overrides bunny.toml)",
+        describe: "App ID (overrides bunny.jsonc)",
       })
       .option("force", {
         alias: "f",

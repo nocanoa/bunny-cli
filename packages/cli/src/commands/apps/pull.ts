@@ -6,13 +6,13 @@ import { confirm, spinner } from "../../core/ui.ts";
 import { clientOptions } from "../../core/client-options.ts";
 import {
   resolveAppId,
-  apiToToml,
-  bunnyTomlExists,
-  saveBunnyToml,
-} from "./toml.ts";
+  apiToConfig,
+  configExists,
+  saveConfig,
+} from "./config.ts";
 
 const COMMAND = "pull";
-const DESCRIPTION = "Sync remote app config to local bunny.toml.";
+const DESCRIPTION = "Sync remote app config to local bunny.jsonc.";
 
 interface PullArgs {
   id?: string;
@@ -27,12 +27,12 @@ export const appsPullCommand = defineCommand<PullArgs>({
     yargs
       .option("id", {
         type: "string",
-        describe: "App ID (overrides bunny.toml)",
+        describe: "App ID (overrides bunny.jsonc)",
       })
       .option("force", {
         alias: "f",
         type: "boolean",
-        describe: "Overwrite bunny.toml without prompting",
+        describe: "Overwrite bunny.jsonc without prompting",
       }),
 
   handler: async ({ id: rawId, force, profile, output, verbose, apiKey }) => {
@@ -40,9 +40,9 @@ export const appsPullCommand = defineCommand<PullArgs>({
     const config = resolveConfig(profile, apiKey);
     const client = createMcClient(clientOptions(config, verbose));
 
-    if (bunnyTomlExists() && !force) {
+    if (configExists() && !force) {
       const confirmed = await confirm(
-        "bunny.toml already exists. Overwrite with remote config?",
+        "bunny.jsonc already exists. Overwrite with remote config?",
       );
       if (!confirmed) {
         logger.log("Pull cancelled.");
@@ -64,14 +64,14 @@ export const appsPullCommand = defineCommand<PullArgs>({
       process.exit(1);
     }
 
-    const toml = apiToToml(app);
-    saveBunnyToml(toml);
+    const toml = apiToConfig(app);
+    saveConfig(toml);
 
     if (output === "json") {
       logger.log(JSON.stringify(toml, null, 2));
       return;
     }
 
-    logger.success("bunny.toml updated from remote.");
+    logger.success("bunny.jsonc updated from remote.");
   },
 });

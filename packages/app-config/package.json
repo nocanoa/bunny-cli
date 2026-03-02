@@ -1,0 +1,19 @@
+{
+  "name": "@bunny.net/app-config",
+  "version": "0.1.0",
+  "type": "module",
+  "module": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema.json": "./generated/schema.json"
+  },
+  "scripts": {
+    "generate:schema": "bun run scripts/generate-schema.ts"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "peerDependencies": {
+    "@bunny.net/api": "workspace:*"
+  }
+}

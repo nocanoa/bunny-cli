@@ -4,8 +4,8 @@ import { defineCommand } from "../../core/define-command.ts";
 import { formatKeyValue, formatTable } from "../../core/format.ts";
 import { logger } from "../../core/logger.ts";
 import { spinner } from "../../core/ui.ts";
-import { STATUS_LABELS, RUNTIME_LABELS } from "./constants.ts";
-import { resolveAppId } from "./toml.ts";
+import { STATUS_LABELS } from "./constants.ts";
+import { resolveAppId } from "./config.ts";
 import { clientOptions } from "../../core/client-options.ts";
 
 const COMMAND = "show";
@@ -22,7 +22,7 @@ export const appsShowCommand = defineCommand<ShowArgs>({
   builder: (yargs) =>
     yargs.option("id", {
       type: "string",
-      describe: "App ID (overrides bunny.toml)",
+      describe: "App ID (overrides bunny.jsonc)",
     }),
 
   handler: async ({ id: rawId, profile, output, verbose, apiKey }) => {
@@ -54,13 +54,11 @@ export const appsShowCommand = defineCommand<ShowArgs>({
     }
 
     const status = STATUS_LABELS[app.status] ?? app.status;
-    const runtime = RUNTIME_LABELS[app.runtimeType] ?? app.runtimeType;
 
     const entries = [
       { key: "ID", value: app.id },
       { key: "Name", value: app.name },
       { key: "Status", value: status },
-      { key: "Runtime", value: runtime },
       {
         key: "Regions",
         value: app.regionSettings.requiredRegionIds.join(", ") || "None",

@@ -13,11 +13,11 @@ import {
 } from "./docker.ts";
 import { clientOptions } from "../../core/client-options.ts";
 import {
-  loadBunnyToml,
-  saveBunnyToml,
+  loadConfig,
+  saveConfig,
   parseImageRef,
-  tomlToAddRequest,
-} from "./toml.ts";
+  configToAddRequest,
+} from "./config.ts";
 
 const COMMAND = "deploy";
 const DESCRIPTION = "Deploy an app.";
@@ -37,7 +37,7 @@ export const appsDeployCommand = defineCommand<DeployArgs>({
     }),
 
   handler: async ({ image, profile, output, verbose, apiKey }) => {
-    const toml = loadBunnyToml();
+    const toml = loadConfig();
     const config = resolveConfig(profile, apiKey);
     const client = createMcClient(clientOptions(config, verbose));
 
@@ -59,7 +59,7 @@ export const appsDeployCommand = defineCommand<DeployArgs>({
         }
         registry = registryId;
         toml.app.container.registry = registry;
-        saveBunnyToml(toml);
+        saveConfig(toml);
       }
 
       // Fetch registry details to get hostname
@@ -97,7 +97,7 @@ export const appsDeployCommand = defineCommand<DeployArgs>({
       createSpin.start();
 
       const { data: result } = await client.POST("/apps", {
-        body: tomlToAddRequest(toml),
+        body: configToAddRequest(toml),
       });
 
       createSpin.stop();
@@ -108,7 +108,7 @@ export const appsDeployCommand = defineCommand<DeployArgs>({
 
       appId = result.id;
       toml.app.id = appId;
-      saveBunnyToml(toml);
+      saveConfig(toml);
 
       logger.success(`App "${toml.app.name}" created (${appId}).`);
     }

@@ -4,7 +4,7 @@ import { defineCommand } from "../../../core/define-command.ts";
 import { formatTable } from "../../../core/format.ts";
 import { logger } from "../../../core/logger.ts";
 import { spinner } from "../../../core/ui.ts";
-import { resolveAppId } from "../toml.ts";
+import { resolveAppId } from "../config.ts";
 import { clientOptions } from "../../../core/client-options.ts";
 
 const COMMAND = "list";
@@ -22,7 +22,7 @@ export const appsVolumesListCommand = defineCommand<ListArgs>({
   builder: (yargs) =>
     yargs.option("id", {
       type: "string",
-      describe: "App ID (overrides bunny.toml)",
+      describe: "App ID (overrides bunny.jsonc)",
     }),
 
   handler: async ({ id: rawId, profile, output, verbose, apiKey }) => {

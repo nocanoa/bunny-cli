@@ -1,0 +1,86 @@
+# @bunny.net/api
+
+Standalone, type-safe API client SDK for [bunny.net](https://bunny.net). Zero CLI dependencies.
+
+## Installation
+
+```bash
+bun add @bunny.net/api
+```
+
+## Usage
+
+```typescript
+import { createCoreClient } from "@bunny.net/api";
+
+const client = createCoreClient({ apiKey: "bny_xxxxxxxxxxxx" });
+
+const { data } = await client.GET("/pullzone");
+console.log(data?.Items);
+```
+
+## Clients
+
+Each client is scoped to a specific bunny.net API domain:
+
+| Client                 | Factory                 | Base URL                         |
+| ---------------------- | ----------------------- | -------------------------------- |
+| Core API               | `createCoreClient()`    | `https://api.bunny.net`          |
+| Edge Scripting         | `createComputeClient()` | `https://api.bunny.net`          |
+| Database               | `createDbClient()`      | `https://api.bunny.net/database` |
+| Magic Containers       | `createMcClient()`      | `https://api.bunny.net/mc`       |
+
+All clients accept a `ClientOptions` object:
+
+```typescript
+interface ClientOptions {
+  apiKey: string;
+  baseUrl?: string;
+  verbose?: boolean;
+  userAgent?: string;
+  onDebug?: (msg: string) => void;
+}
+```
+
+## Error Handling
+
+Non-OK responses are automatically converted to `ApiError` by the built-in middleware. You never need to check status codes manually.
+
+```typescript
+import { ApiError, UserError } from "@bunny.net/api";
+
+try {
+  await client.GET("/pullzone/{id}", { params: { path: { id: 999 } } });
+} catch (err) {
+  if (err instanceof ApiError) {
+    console.error(err.message, err.status);
+  }
+}
+```
+
+- `UserError` — expected errors (bad input, missing config). Has an optional `hint` property.
+- `ApiError` — extends `UserError`. Carries `status`, optional `field`, and optional `validationErrors[]`.
+
+## Generated Types
+
+TypeScript types are generated from OpenAPI specs via `openapi-typescript`. Access them through the `generated` export:
+
+```typescript
+import type { components } from "@bunny.net/api/generated/core.d.ts";
+
+type PullZone = components["schemas"]["PullZone"];
+```
+
+Available type modules:
+- `@bunny.net/api/generated/core.d.ts`
+- `@bunny.net/api/generated/compute.d.ts`
+- `@bunny.net/api/generated/database.d.ts`
+- `@bunny.net/api/generated/magic-containers.d.ts`
+
+## Updating Specs
+
+```bash
+cd packages/api
+bun run update-specs    # Downloads latest specs + regenerates types
+bun run generate        # Regenerate types from existing specs
+```

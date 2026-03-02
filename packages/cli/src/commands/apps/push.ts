@@ -3,11 +3,11 @@ import { resolveConfig } from "../../config/index.ts";
 import { defineCommand } from "../../core/define-command.ts";
 import { logger } from "../../core/logger.ts";
 import { spinner } from "../../core/ui.ts";
-import { resolveAppId, loadBunnyToml, tomlToPatchRequest } from "./toml.ts";
+import { resolveAppId, loadConfig, configToPatchRequest } from "./config.ts";
 import { clientOptions } from "../../core/client-options.ts";
 
 const COMMAND = "push";
-const DESCRIPTION = "Apply local bunny.toml config to remote app.";
+const DESCRIPTION = "Apply local bunny.jsonc config to remote app.";
 
 interface PushArgs {
   "dry-run"?: boolean;
@@ -31,7 +31,7 @@ export const appsPushCommand = defineCommand<PushArgs>({
     apiKey,
   }) => {
     const appId = resolveAppId();
-    const toml = loadBunnyToml();
+    const toml = loadConfig();
     const config = resolveConfig(profile, apiKey);
     const client = createMcClient(clientOptions(config, verbose));
 
@@ -49,7 +49,7 @@ export const appsPushCommand = defineCommand<PushArgs>({
       process.exit(1);
     }
 
-    const patchRequest = tomlToPatchRequest(toml, existingApp);
+    const patchRequest = configToPatchRequest(toml, existingApp);
 
     if (dryRun) {
       if (output === "json") {
@@ -62,12 +62,6 @@ export const appsPushCommand = defineCommand<PushArgs>({
 
       if (patchRequest.name !== existingApp.name) {
         logger.log(`  Name: ${existingApp.name} → ${patchRequest.name}`);
-      }
-
-      if (patchRequest.runtimeType !== existingApp.runtimeType) {
-        logger.log(
-          `  Runtime: ${existingApp.runtimeType} → ${patchRequest.runtimeType}`,
-        );
       }
 
       const containerCount = patchRequest.containerTemplates?.length ?? 0;
@@ -104,6 +98,6 @@ export const appsPushCommand = defineCommand<PushArgs>({
       return;
     }
 
-    logger.success("App config updated from bunny.toml.");
+    logger.success("App config updated from bunny.jsonc.");
   },
 });

@@ -4,7 +4,7 @@ import { defineCommand } from "../../../core/define-command.ts";
 import { formatKeyValue } from "../../../core/format.ts";
 import { logger } from "../../../core/logger.ts";
 import { spinner } from "../../../core/ui.ts";
-import { resolveAppId } from "../toml.ts";
+import { resolveAppId } from "../config.ts";
 import { clientOptions } from "../../../core/client-options.ts";
 
 const COMMAND = "show";
@@ -21,7 +21,7 @@ export const appsRegionsShowCommand = defineCommand<ShowArgs>({
   builder: (yargs) =>
     yargs.option("id", {
       type: "string",
-      describe: "App ID (overrides bunny.toml)",
+      describe: "App ID (overrides bunny.jsonc)",
     }),
 
   handler: async ({ id: rawId, profile, output, verbose, apiKey }) => {

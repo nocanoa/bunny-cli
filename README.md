@@ -240,10 +240,10 @@ bunny db tokens invalidate --force
 
 ### `bunny apps`
 
-Manage apps (Magic Containers). Apps are multi-container deployments where all containers share a localhost network. Configuration is stored in a `bunny.toml` file which is committed to your repo. The app ID is written back to the toml on first deploy, so cloning the repo gives you everything you need.
+Manage apps (Magic Containers). Apps are multi-container deployments where all containers share a localhost network. Configuration is stored in a `bunny.jsonc` file which is committed to your repo. The app ID is written back to the config on first deploy, so cloning the repo gives you everything you need. The JSONC format supports a `$schema` property for editor autocompletion.
 
 ```bash
-# Scaffold a new bunny.toml (interactive)
+# Scaffold a new bunny.jsonc (interactive)
 bunny apps init
 
 # Deploy (creates the app on first run, builds from Dockerfile if configured)
@@ -252,27 +252,26 @@ bunny apps deploy
 # Deploy a pre-built image
 bunny apps deploy --image ghcr.io/myorg/api:v1.2
 
-# Sync remote config to local bunny.toml
+# Sync remote config to local bunny.jsonc
 bunny apps pull
 
-# Apply local bunny.toml changes to remote
+# Apply local bunny.jsonc changes to remote
 bunny apps push
 ```
 
 #### `bunny apps init`
 
-Scaffold a new `bunny.toml` config file. Prompts for name, runtime, and regions. If a `Dockerfile` is detected in the current directory, offers to use it for build-and-deploy and prompts for a container registry. Otherwise prompts for a container image.
+Scaffold a new `bunny.jsonc` config file. Prompts for name and regions. If a `Dockerfile` is detected in the current directory, offers to use it for build-and-deploy and prompts for a container registry. Otherwise prompts for a container image.
 
 ```bash
 bunny apps init
-bunny apps init --name my-api --runtime shared --image nginx:latest
+bunny apps init --name my-api --image nginx:latest
 ```
 
-| Flag        | Description                           |
-| ----------- | ------------------------------------- |
-| `--name`    | App name (defaults to directory name) |
-| `--runtime` | Runtime type: `shared` or `reserved`  |
-| `--image`   | Primary container image               |
+| Flag      | Description                           |
+| --------- | ------------------------------------- |
+| `--name`  | App name (defaults to directory name) |
+| `--image` | Primary container image               |
 
 #### `bunny apps list`
 
@@ -294,7 +293,7 @@ bunny apps show --id <app-id>
 
 #### `bunny apps deploy`
 
-Deploy an app. If `bunny.toml` has no `id`, the app is created on Bunny first. If `dockerfile` is set in the container config, the image is built and pushed automatically (prompts for a registry if not configured). Use `--image` to skip the build and deploy a pre-built image.
+Deploy an app. If `bunny.jsonc` has no `id`, the app is created on Bunny first. If `dockerfile` is set in the container config, the image is built and pushed automatically (prompts for a registry if not configured). Use `--image` to skip the build and deploy a pre-built image.
 
 ```bash
 # Build from Dockerfile + deploy
@@ -310,21 +309,21 @@ bunny apps deploy --image ghcr.io/myorg/api:v1.2
 
 #### `bunny apps pull` / `bunny apps push`
 
-Sync configuration between the remote API and local `bunny.toml`.
+Sync configuration between the remote API and local `bunny.jsonc`.
 
 ```bash
-# Pull remote state to local bunny.toml
+# Pull remote state to local bunny.jsonc
 bunny apps pull
 bunny apps pull --force
 
-# Push local bunny.toml to remote
+# Push local bunny.jsonc to remote
 bunny apps push
 bunny apps push --dry-run
 ```
 
 #### `bunny apps accessory`
 
-Manage accessory containers (databases, caches, sidecars). Accessories are defined in the `[accessories]` section of `bunny.toml`.
+Manage accessory containers (databases, caches, sidecars). Accessories are defined in the `accessories` section of `bunny.jsonc`.
 
 ```bash
 # List accessories
@@ -489,10 +488,12 @@ bunny scripts show
 
 ## Development
 
-This is a Bun workspace monorepo with two packages:
+This is a Bun workspace monorepo with four packages. See each package's README for details:
 
-- `packages/api/` (`@bunny.net/api`) — standalone API client SDK
-- `packages/cli/` (`@bunny.net/cli`) — the CLI
+- [`packages/api/`](packages/api/) (`@bunny.net/api`) — standalone API client SDK
+- [`packages/app-config/`](packages/app-config/) (`@bunny.net/app-config`) — shared app config schemas, types, and JSON Schema
+- [`packages/database-shell/`](packages/database-shell/) (`@bunny.net/database-shell`) — standalone interactive SQL shell
+- [`packages/cli/`](packages/cli/) (`@bunny.net/cli`) — the CLI
 
 ```bash
 # Run directly

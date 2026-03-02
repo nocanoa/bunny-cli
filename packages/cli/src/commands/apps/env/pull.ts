@@ -6,7 +6,7 @@ import { defineCommand } from "../../../core/define-command.ts";
 import { UserError } from "../../../core/errors.ts";
 import { logger } from "../../../core/logger.ts";
 import { confirm, spinner } from "../../../core/ui.ts";
-import { resolveAppId, resolveContainerId } from "../toml.ts";
+import { resolveAppId, resolveContainerId } from "../config.ts";
 import { clientOptions } from "../../../core/client-options.ts";
 
 const COMMAND = "pull";
@@ -26,7 +26,7 @@ export const appsEnvPullCommand = defineCommand<PullArgs>({
     yargs
       .option("id", {
         type: "string",
-        describe: "App ID (overrides bunny.toml)",
+        describe: "App ID (overrides bunny.jsonc)",
       })
       .option("container", {
         type: "string",
