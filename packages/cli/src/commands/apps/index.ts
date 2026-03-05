@@ -13,7 +13,7 @@ import { appsShowCommand } from "./show.ts";
 import { appsUndeployCommand } from "./undeploy.ts";
 import { appsVolumesNamespace } from "./volumes/index.ts";
 
-export const appsNamespace = defineNamespace("apps", "Manage apps.", [
+export const appsNamespace = defineNamespace("apps", false as never, [
   appsDeleteCommand,
   appsDeployCommand,
   appsEndpointsNamespace,

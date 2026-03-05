@@ -2,13 +2,57 @@
 
 Standalone, framework-agnostic interactive SQL shell for libSQL databases. Provides a readline-based REPL, dot-commands, multiple output formats, sensitive column masking, and persistent history.
 
-## Installation
+Also powers `bunny db shell` in the [Bunny CLI](https://www.npmjs.com/package/@bunny.net/cli).
+
+## Quick Start
+
+Run directly without installing:
 
 ```bash
-bun add @bunny.net/database-shell
+npx @bunny.net/database-shell libsql://<your-database>.lite.bunnydb.net --token ey...
 ```
 
-## Usage
+Or install globally:
+
+```bash
+npm install -g @bunny.net/database-shell
+bsql libsql://<your-database>.lite.bunnydb.net --token ey...
+```
+
+## CLI Usage
+
+```bash
+# Interactive shell
+bsql <url> [--token <token>]
+
+# Execute a query and exit
+bsql <url> "SELECT * FROM users"
+
+# Execute a SQL file
+bsql <url> seed.sql
+
+# Change output mode
+bsql <url> "SELECT * FROM users" --mode json
+
+# Show sensitive columns unmasked
+bsql <url> --unmask
+```
+
+| Flag              | Description                                          |
+| ----------------- | ---------------------------------------------------- |
+| `--token <token>` | Auth token for the database                          |
+| `--mode <mode>`   | Output mode: `default`, `table`, `json`, `csv`, `markdown` |
+| `--unmask`        | Show sensitive column values unmasked                |
+| `--timing`        | Show query execution timing                          |
+| `--help`          | Show help                                            |
+
+## Library Usage
+
+### Installation
+
+```bash
+npm add @bunny.net/database-shell
+```
 
 ### Interactive Shell
 
@@ -102,8 +146,11 @@ Available in interactive mode:
 | `.describe TABLE`  | Show column details                 |
 | `.schema [TABLE]`  | Show CREATE statements              |
 | `.indexes [TABLE]` | List indexes                        |
+| `.fk TABLE`        | Show foreign keys for a table       |
+| `.er`              | Show entity-relationship overview   |
 | `.count TABLE`     | Count rows                          |
 | `.size TABLE`      | Show table stats                    |
+| `.truncate TABLE`  | Delete all rows from a table        |
 | `.dump [TABLE]`    | Dump schema and data as SQL         |
 | `.read FILE`       | Execute SQL from a file             |
 | `.mode [MODE]`     | Set output mode                     |

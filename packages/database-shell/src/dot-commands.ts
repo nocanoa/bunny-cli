@@ -179,6 +179,94 @@ export async function executeDotCommand(
       return "handled";
     }
 
+    case ".fk": {
+      const tableName = parts[1];
+      if (!tableName) {
+        logger.error("Usage: .fk TABLE");
+        return "handled";
+      }
+      const escaped = tableName.replace(/'/g, "''");
+      const result = await client.execute(
+        `SELECT id, "table" as referenced_table, "from" as column_name, "to" as referenced_column, on_update, on_delete FROM pragma_foreign_key_list('${escaped}')`,
+      );
+      if (result.rows.length === 0) {
+        logger.dim(`  No foreign keys on ${tableName}.`);
+      } else {
+        printResultSet(result, state.mode, state.masked, logger);
+      }
+      return "handled";
+    }
+
+    case ".truncate": {
+      const tableName = parts[1];
+      if (!tableName) {
+        logger.error("Usage: .truncate TABLE");
+        return "handled";
+      }
+      const escaped = tableName.replace(/'/g, "''");
+      const exists = await client.execute(
+        `SELECT name FROM sqlite_master WHERE type='table' AND name='${escaped}'`,
+      );
+      if (exists.rows.length === 0) {
+        logger.error(`Table not found: ${tableName}`);
+        return "handled";
+      }
+      if (
+        !(await askConfirm(
+          rl,
+          `Delete all rows from "${tableName}"?`,
+        ))
+      )
+        return "handled";
+
+      const result = await client.execute(
+        `DELETE FROM "${tableName.replace(/"/g, '""')}"`,
+      );
+      logger.success(
+        `${result.rowsAffected} row${result.rowsAffected === 1 ? "" : "s"} deleted from ${tableName}.`,
+      );
+      return "handled";
+    }
+
+    case ".er": {
+      const tables = (
+        await client.execute(
+          "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name",
+        )
+      ).rows.map((r) => String(r[0]));
+
+      if (tables.length === 0) {
+        logger.dim("  No tables found.");
+        return "handled";
+      }
+
+      for (const tbl of tables) {
+        const escaped = tbl.replace(/'/g, "''");
+        const cols = await client.execute(
+          `SELECT name, type, CASE WHEN pk THEN 'PK' ELSE '' END as pk FROM pragma_table_info('${escaped}')`,
+        );
+        const fks = await client.execute(
+          `SELECT "from", "table" as ref_table, "to" as ref_col FROM pragma_foreign_key_list('${escaped}')`,
+        );
+
+        logger.log(`  ${tbl}`);
+        for (const col of cols.rows) {
+          const name = String(col[0]);
+          const type = String(col[1] || "");
+          const pk = col[2] ? " [PK]" : "";
+          const fk = fks.rows.find((f) => String(f[0]) === name);
+          const fkLabel = fk
+            ? ` → ${String(fk[1])}.${String(fk[2])}`
+            : "";
+          logger.log(
+            `    ${name} ${type}${pk}${fkLabel}`,
+          );
+        }
+        logger.log();
+      }
+      return "handled";
+    }
+
     case ".mode": {
       const newMode = parts[1]?.toLowerCase() as PrintMode | undefined;
       if (!newMode || !PRINT_MODES.includes(newMode)) {
@@ -275,23 +363,26 @@ export async function executeDotCommand(
     }
 
     case ".help": {
-      logger.log("  .tables          List all tables");
-      logger.log("  .describe TABLE  Show column details for a table");
-      logger.log("  .schema [TABLE]  Show CREATE statements");
-      logger.log("  .indexes [TABLE] List indexes");
-      logger.log("  .count TABLE     Count rows in a table");
-      logger.log("  .size TABLE      Show table stats (rows, columns, indexes)");
-      logger.log("  .dump [TABLE]    Dump schema and data as SQL");
-      logger.log("  .read FILE       Execute SQL statements from a file");
+      logger.log("  .tables           List all tables");
+      logger.log("  .describe TABLE   Show column details for a table");
+      logger.log("  .schema [TABLE]   Show CREATE statements");
+      logger.log("  .indexes [TABLE]  List indexes");
+      logger.log("  .fk TABLE         Show foreign keys for a table");
+      logger.log("  .er               Show entity-relationship overview");
+      logger.log("  .count TABLE      Count rows in a table");
+      logger.log("  .size TABLE       Show table stats (rows, columns, indexes)");
+      logger.log("  .truncate TABLE   Delete all rows from a table");
+      logger.log("  .dump [TABLE]     Dump schema and data as SQL");
+      logger.log("  .read FILE        Execute SQL statements from a file");
       logger.log(
-        "  .mode [MODE]     Set output mode (default, table, json, csv, markdown)",
+        "  .mode [MODE]      Set output mode (default, table, json, csv, markdown)",
       );
-      logger.log("  .timing          Toggle query execution timing");
-      logger.log("  .mask            Enable sensitive column masking");
-      logger.log("  .unmask          Disable sensitive column masking");
-      logger.log("  .clear-history   Clear command history");
-      logger.log("  .quit            Exit the shell");
-      logger.log("  .help            Show this help");
+      logger.log("  .timing           Toggle query execution timing");
+      logger.log("  .mask             Enable sensitive column masking");
+      logger.log("  .unmask           Disable sensitive column masking");
+      logger.log("  .clear-history    Clear command history");
+      logger.log("  .quit             Exit the shell");
+      logger.log("  .help             Show this help");
       return "handled";
     }
 

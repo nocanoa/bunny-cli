@@ -212,6 +212,13 @@ bunny-cli/
 │           │   │   ├── resolve-db.ts     # Helper: resolve database ID from flag, .env, or interactive prompt
 │           │   │   ├── shell.ts          # Thin wrapper: credential resolution + delegates to @bunny.net/database-shell
 │           │   │   ├── usage.ts          # Show database usage statistics
+│           │   │   ├── region-choices.ts # Shared: grouped region prompt choices by continent
+│           │   │   ├── regions/
+│           │   │   │   ├── index.ts     # defineNamespace("regions", ...) — registers region commands
+│           │   │   │   ├── list.ts      # List configured primary and replica regions
+│           │   │   │   ├── add.ts       # Add primary/replica regions (interactive multiselect or flags)
+│           │   │   │   ├── remove.ts    # Remove primary/replica regions
+│           │   │   │   └── update.ts    # Interactive multiselect to toggle all regions on/off
 │           │   │   └── tokens/
 │           │   │       ├── index.ts      # defineNamespace("tokens", ...) — registers token commands
 │           │   │       ├── create.ts     # Generate an auth token (read-only/full-access, optional expiry)
