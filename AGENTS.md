@@ -43,7 +43,7 @@ Bun replaces the entire Node.js toolchain. There are no separate tools for trans
 | `prompts`        | Interactive input: password masks, confirmations, multi-select |
 | `cli-table3`     | Formatted terminal tables                                      |
 | `zod`            | Schema validation for config files and CLI input               |
-| `@libsql/client` | libSQL/Turso database client (used by `db shell`)              |
+| `@libsql/client` | libSQL database client (used by `db shell`)                    |
 | `openapi-fetch`  | Type-safe HTTP client generated from OpenAPI specs             |
 | `jsonc-parser`   | JSONC parser for `bunny.jsonc` config files                    |
 | `smol-toml`      | TOML v1 parser (legacy `bunny.toml` fallback only)             |
@@ -74,7 +74,7 @@ This is a Bun workspace monorepo with four packages:
 
 - **`@bunny.net/api`** (`packages/api/`) — Standalone, type-safe API client SDK for bunny.net. Zero CLI dependencies. Publishable to npm.
 - **`@bunny.net/app-config`** (`packages/app-config/`) — Shared app configuration schemas (Zod), inferred types, JSON Schema generation, and API conversion functions. Used by the CLI and potentially other tools.
-- **`@bunny.net/database-shell`** (`packages/database-shell/`) — Standalone interactive SQL shell for libSQL databases. Framework-agnostic REPL, dot-commands, formatting, masking, and history.
+- **`@bunny.net/database-shell`** (`packages/database-shell/`) — Standalone interactive SQL shell for libSQL databases. Framework-agnostic REPL, dot-commands, formatting, masking, and history. Also usable as a standalone CLI via `npx @bunny.net/database-shell` (binary: `bsql`).
 - **`@bunny.net/cli`** (`packages/cli/`) — The CLI. Depends on `@bunny.net/api`, `@bunny.net/app-config`, and `@bunny.net/database-shell`.
 
 ```
@@ -119,12 +119,13 @@ bunny-cli/
 │   │       └── parse-image-ref.ts         # Docker image reference parser (parseImageRef)
 │   │
 │   ├── database-shell/                   # @bunny.net/database-shell package
-│   │   ├── package.json
+│   │   ├── package.json                  # bin: { "bsql": "./src/cli.ts" }
 │   │   ├── tsconfig.json
 │   │   └── src/
+│   │       ├── cli.ts                    # Standalone CLI entry point (npx @bunny.net/database-shell / bsql)
 │   │       ├── index.ts                  # Barrel export: startShell, executeQuery, executeFile, types
 │   │       ├── shell.ts                  # startShell() REPL engine, executeQuery(), executeFile()
-│   │       ├── dot-commands.ts           # .tables, .schema, .dump, .count, .size, etc.
+│   │       ├── dot-commands.ts           # .tables, .schema, .fk, .er, .truncate, .dump, .count, .size, etc.
 │   │       ├── format.ts                 # printResultSet(), masking, csvEscape
 │   │       ├── parser.ts                 # splitStatements() SQL parsing
 │   │       ├── history.ts               # Shell history persistence
@@ -157,8 +158,9 @@ bunny-cli/
 │           │   └── paths.ts              # XDG-compliant config file path resolution
 │           │
 │           ├── commands/
-│           │   ├── apps/
-│           │   │   ├── index.ts          # defineNamespace("apps", ...) — registers all app commands
+│           │   ├── apps/                 # Experimental — hidden from help and landing page
+│           │   │   ├── APPS.md           # Apps documentation (while experimental)
+│           │   │   ├── index.ts          # defineNamespace("apps", false) — hidden, registers all app commands
 │           │   │   ├── constants.ts      # Status label maps
 │           │   │   ├── config.ts         # bunny.jsonc file I/O, re-exports from @bunny.net/app-config (resolveAppId, resolveContainerId)
 │           │   │   ├── docker.ts         # Docker helpers (build, push, login, generateTag, promptRegistry)
@@ -204,37 +206,51 @@ bunny-cli/
 │           │   ├── whoami.ts             # Show authenticated account: name, email, profile (top-level: bunny whoami)
 │           │   ├── db/
 │           │   │   ├── index.ts          # defineNamespace("db", ...) — registers all database commands
+│           │   │   ├── constants.ts      # Database status labels, region maps
 │           │   │   ├── create.ts         # Create a new database (interactive region selection or flags)
 │           │   │   ├── delete.ts         # Delete a database (double confirmation or --force)
+│           │   │   ├── docs.ts           # Open database documentation in browser
 │           │   │   ├── list.ts           # List all databases
-│           │   │   ├── show.ts          # Show database details (regions, size, status)
 │           │   │   ├── quickstart.ts     # Generate quickstart guide for connecting to a database
+│           │   │   ├── region-choices.ts # Shared: grouped region prompt choices by continent
 │           │   │   ├── resolve-db.ts     # Helper: resolve database ID from flag, .env, or interactive prompt
 │           │   │   ├── shell.ts          # Thin wrapper: credential resolution + delegates to @bunny.net/database-shell
+│           │   │   ├── show.ts           # Show database details (regions, size, status)
 │           │   │   ├── usage.ts          # Show database usage statistics
-│           │   │   ├── region-choices.ts # Shared: grouped region prompt choices by continent
 │           │   │   ├── regions/
 │           │   │   │   ├── index.ts     # defineNamespace("regions", ...) — registers region commands
-│           │   │   │   ├── list.ts      # List configured primary and replica regions
 │           │   │   │   ├── add.ts       # Add primary/replica regions (interactive multiselect or flags)
+│           │   │   │   ├── list.ts      # List configured primary and replica regions
 │           │   │   │   ├── remove.ts    # Remove primary/replica regions
 │           │   │   │   └── update.ts    # Interactive multiselect to toggle all regions on/off
 │           │   │   └── tokens/
 │           │   │       ├── index.ts      # defineNamespace("tokens", ...) — registers token commands
 │           │   │       ├── create.ts     # Generate an auth token (read-only/full-access, optional expiry)
 │           │   │       └── invalidate.ts # Invalidate all tokens for a database (with confirmation)
-│           │   ├── registry/
-│           │   │   ├── index.ts          # defineNamespace("registry", ...) — top-level: bunny registry
+│           │   ├── registries/
+│           │   │   ├── index.ts          # Manual CommandModule (not defineNamespace) — default handler runs list
 │           │   │   ├── list.ts           # List container registries
 │           │   │   ├── add.ts            # Add registry with credentials
 │           │   │   └── remove.ts         # Remove registry
+│           │   ├── docs.ts               # Open bunny.net documentation in browser (top-level: bunny docs)
 │           │   └── scripts/
 │           │       ├── index.ts          # defineNamespace("scripts", ...) — registers all script commands
 │           │       ├── constants.ts      # SCRIPT_MANIFEST, SCRIPT_TYPE_LABELS
+│           │       ├── deploy.ts         # Deploy code to an Edge Script (publishes by default)
+│           │       ├── docs.ts           # Open Edge Script documentation in browser
 │           │       ├── init.ts           # Scaffold a new Edge Script project from a template
 │           │       ├── link.ts           # Link directory to a remote Edge Script (.bunny/script.json)
 │           │       ├── list.ts           # List all Edge Scripts (Standalone + Middleware)
-│           │       └── show.ts           # Show Edge Script details (supports manifest fallback)
+│           │       ├── show.ts           # Show Edge Script details (supports manifest fallback)
+│           │       ├── deployments/
+│           │       │   ├── index.ts      # defineNamespace("deployments", ...)
+│           │       │   └── list.ts       # List deployments for an Edge Script
+│           │       └── env/
+│           │           ├── index.ts      # defineNamespace("env", ...)
+│           │           ├── list.ts       # List environment variables for a script
+│           │           ├── set.ts        # Set environment variable
+│           │           ├── remove.ts     # Remove environment variable
+│           │           └── pull.ts       # Pull environment variables to .env file
 │           │
 │           └── utils/                    # Shared utility functions
 │
@@ -332,7 +348,7 @@ Registered on the root yargs instance in `cli.ts` with `global: true` (equivalen
 
 These are configured on the root yargs instance:
 
-- **`demandCommand(1)`** — Requires a subcommand; shows help if none provided.
+- **`$0` default command** — Running `bunny` with no subcommand shows a branded landing page (ASCII art, commands list, examples, global options).
 - **`recommendCommands()`** — "Did you mean ...?" suggestions on typos (like Cobra).
 - **`strict()`** — Errors on unrecognized flags.
 - **`.version()`** — Reads from `package.json`.
@@ -637,7 +653,7 @@ bunny
 │   └── profile
 │       ├── create <name>  (alias: add)     Create a named profile with API key
 │       └── delete <name>                   Delete a named profile
-├── apps
+├── apps                                    (experimental — hidden from help and landing page)
 │   ├── init            [--name] [--image]
 │   │                                       Scaffold bunny.jsonc (detects Dockerfile)
 │   ├── list            (alias: ls)         List all apps
@@ -663,19 +679,30 @@ bunny
 │   └── regions
 │       ├── list        (alias: ls)         List available regions
 │       └── show        [id]                Show app region settings
-├── registry
+├── registries                              List container registries (default: list)
 │   ├── list            (alias: ls)         List container registries
 │   ├── add             [--name] [--username]  Add registry
 │   └── remove          <id>                Remove registry
 ├── db
 │   ├── create          [--name] [--primary] [--replicas] [--storage-region]
 │   │                                       Create a new database
+│   ├── delete          [database-id] [--force]
+│   │                                       Delete a database
+│   ├── docs                                Open database documentation in browser
 │   ├── list            (alias: ls) [--group-id]
 │   │                                       List all databases
 │   ├── quickstart      [database-id] [--lang] [--url] [--token]
 │   │                                       Generate quickstart guide for a database
+│   ├── regions
+│   │   ├── add         [database-id] [--primary] [--replicas]
+│   │   │                                   Add primary/replica regions
+│   │   ├── list        [database-id]       List configured regions
+│   │   ├── remove      [database-id] [--primary] [--replicas]
+│   │   │                                   Remove primary/replica regions
+│   │   └── update      [database-id]       Interactive region toggle
 │   ├── shell           [database-id] [query] [-e] [-m] [--unmask] [--url] [--token]
 │   │                                       Interactive SQL shell with dot-commands
+│   ├── show            [database-id]       Show database details
 │   ├── usage           [database-id] [--period] [--from] [--to]
 │   │                                       Show database usage statistics
 │   └── tokens
@@ -689,9 +716,16 @@ bunny
 │   │                                       Deploy code to an Edge Script (publishes by default)
 │   ├── deployments
 │   │   └── list        [id] (alias: ls)    List deployments for an Edge Script
+│   ├── docs                                Open Edge Script documentation in browser
+│   ├── env
+│   │   ├── list        [id]                List environment variables
+│   │   ├── set         <key> <value> [id]  Set environment variable
+│   │   ├── remove      <key> [id]          Remove environment variable
+│   │   └── pull        [id] [--force]      Pull env vars to .env file
 │   ├── link            [--id]              Link directory to a remote Edge Script
 │   ├── list            (alias: ls)         List all Edge Scripts
 │   └── show            [id]                Show Edge Script details (uses linked script if omitted)
+├── docs                                    Open bunny.net documentation in browser
 ├── --profile, -p       <string>            Profile to use (default: "default")
 ├── --verbose, -v       <boolean>           Enable verbose output
 ├── --output, -o        <text|json|table|csv|markdown>  Output format (default: "text")
@@ -970,7 +1004,7 @@ The shell is split across two packages:
 **Shell engine components** (in `packages/database-shell/src/`):
 
 - **REPL** (`shell.ts`) — `startShell()`, `executeQuery()`, `executeFile()`. Uses `node:readline` with multi-line SQL support.
-- **Dot-commands** (`dot-commands.ts`) — `.tables`, `.schema`, `.describe`, `.indexes`, `.count`, `.size`, `.dump`, `.read`, `.mode`, `.timing`, `.mask`, `.unmask`, `.clear-history`, `.help`, `.quit`.
+- **Dot-commands** (`dot-commands.ts`) — `.tables`, `.schema`, `.describe`, `.indexes`, `.fk`, `.er`, `.count`, `.size`, `.truncate`, `.dump`, `.read`, `.mode`, `.timing`, `.mask`, `.unmask`, `.clear-history`, `.help`, `.quit`.
 - **Formatting** (`format.ts`) — `printResultSet()` with 5 output modes: `default`, `table`, `json`, `csv`, `markdown`. Sensitive column masking (full mask for passwords/secrets, email mask for email columns).
 - **History** (`history.ts`) — Stored at `~/.config/bunny/shell_history` (respects `XDG_CONFIG_HOME`). Max 1000 entries.
 - **SQL parsing** (`parser.ts`) — `splitStatements()` for `.sql` file execution.
