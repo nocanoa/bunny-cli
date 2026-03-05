@@ -10,5 +10,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@bunny.net/app-config"]
+  "ignore": ["@bunny.net/app-config", "@bunny.net/api"]
 }
