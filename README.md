@@ -13,6 +13,19 @@ Monorepo for the [bunny.net](https://bunny.net) CLI and supporting packages.
 
 See each package's README for usage and API documentation.
 
+## Installation
+
+```bash
+# Shell installer (downloads prebuilt binary)
+curl -fsSL https://bunny.net/cli | sh
+
+# Or via npm
+npm install -g @bunny.net/cli
+
+# Or via bun
+bun install -g @bunny.net/cli
+```
+
 ## Development
 
 ```bash

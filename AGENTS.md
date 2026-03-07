@@ -638,6 +638,51 @@ bun build packages/cli/src/index.ts --compile --target=bun-darwin-arm64 --outfil
 bun build packages/cli/src/index.ts --compile --target=bun-windows-x64 --outfile bunny-windows-x64.exe
 ```
 
+### Distribution
+
+The CLI is distributed through three channels:
+
+**1. Shell installer (standalone binary)**
+
+```bash
+curl -fsSL https://bunny.net/cli | sh
+```
+
+Downloads the prebuilt binary for the current platform from GitHub Releases and installs to `/usr/local/bin`. Supports `BUNNY_INSTALL_DIR` env var for custom paths. Script is at `install.sh` in the repo root.
+
+**2. npm (platform-specific binary packages)**
+
+```bash
+npm install -g @bunny.net/cli
+```
+
+Uses the platform-specific package pattern (like esbuild/turbo). The main `@bunny.net/cli` package contains a JS shim (`packages/cli/bin/bunny.js`) that delegates to the correct platform binary. Platform packages:
+
+| Package | Platform |
+| --- | --- |
+| `@bunny.net/cli-linux-x64` | Linux x64 |
+| `@bunny.net/cli-linux-arm64` | Linux arm64 |
+| `@bunny.net/cli-darwin-x64` | macOS x64 |
+| `@bunny.net/cli-darwin-arm64` | macOS arm64 (Apple Silicon) |
+| `@bunny.net/cli-windows-x64` | Windows x64 |
+
+Platform packages live in `packages/` alongside the other workspace packages. They are versioned in lockstep with `@bunny.net/cli` via the `fixed` array in `.changeset/config.json`. They contain only a `package.json` and the compiled binary, published by CI.
+
+**3. GitHub Releases**
+
+Each release includes prebuilt binaries as release assets, created automatically by `.github/workflows/release.yml`.
+
+### Release workflow
+
+1. Create changesets on feature branches (`bun run changeset`)
+2. Merge to `main` — the `changesets/action` opens or updates a "Release" PR
+3. Merge the Release PR — changesets bumps versions for `@bunny.net/cli` and all platform packages (kept in sync via `fixed`)
+4. The release workflow detects the version change, builds binaries for all platforms, publishes platform packages then `@bunny.net/cli` to npm, and creates a GitHub release with binaries attached
+
+### CI
+
+Tests and type-checking run on every pull request via `.github/workflows/ci.yml` (`bun run typecheck` and `bun test`).
+
 ---
 
 ## Command Reference

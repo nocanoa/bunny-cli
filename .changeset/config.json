@@ -5,10 +5,19 @@
     { "repo": "jamie-at-bunny/bun-ny-cli" }
   ],
   "commit": false,
-  "fixed": [],
+  "fixed": [
+    [
+      "@bunny.net/cli",
+      "@bunny.net/cli-linux-x64",
+      "@bunny.net/cli-linux-arm64",
+      "@bunny.net/cli-darwin-x64",
+      "@bunny.net/cli-darwin-arm64",
+      "@bunny.net/cli-windows-x64"
+    ]
+  ],
   "linked": [],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@bunny.net/app-config", "@bunny.net/api"]
+  "ignore": []
 }
