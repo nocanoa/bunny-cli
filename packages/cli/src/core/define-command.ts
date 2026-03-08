@@ -6,6 +6,8 @@ interface CommandDef<A = {}> {
   command: string;
   aliases?: readonly string[];
   describe: string;
+  /** Usage examples shown in `--help` output. Each entry is `[command, description]`. */
+  examples?: ReadonlyArray<readonly [string, string]>;
   /** Define command-specific flags and positional arguments. */
   builder?: (yargs: Argv) => Argv<A>;
   /**
@@ -42,11 +44,21 @@ interface CommandDef<A = {}> {
  * ```
  */
 export function defineCommand<A>(def: CommandDef<A>): CommandModule {
+  const wrappedBuilder = (yargs: Argv) => {
+    let y = def.builder ? def.builder(yargs) : yargs;
+    if (def.examples) {
+      for (const [cmd, desc] of def.examples) {
+        y = y.example(cmd, desc) as any;
+      }
+    }
+    return y;
+  };
+
   return {
     command: def.command,
     aliases: def.aliases,
     describe: def.describe,
-    builder: def.builder as any,
+    builder: wrappedBuilder as any,
     handler: async (argv) => {
       const args = argv as unknown as A & GlobalArgs;
       try {

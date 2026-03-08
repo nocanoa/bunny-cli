@@ -77,6 +77,10 @@ interface InitArgs {
 export const scriptsInitCommand = defineCommand<InitArgs>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 scripts init", "Interactive wizard"],
+    ["$0 scripts init --name my-script --type standalone --template Empty --deploy-method cli", "Non-interactive"],
+  ],
 
   builder: (yargs) =>
     yargs

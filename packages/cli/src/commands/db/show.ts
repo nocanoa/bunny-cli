@@ -39,6 +39,11 @@ interface ShowArgs {
 export const dbShowCommand = defineCommand<ShowArgs>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 db show", "Auto-detect database from .env"],
+    ["$0 db show db_01KCHBG8C5KSFGG0VRNFQ7EK7X", "Show a specific database"],
+    ["$0 db show --output json", "JSON output for scripting"],
+  ],
 
   handler: async ({
     [ARG_DATABASE_ID]: databaseIdArg,

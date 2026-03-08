@@ -118,6 +118,11 @@ export const dbShellCommand = defineCommand<{
 }>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 db shell", "Interactive REPL (auto-detect from .env)"],
+    ["$0 db shell -e \"SELECT 1\"", "Execute a query and exit"],
+    ["$0 db shell --mode json", "JSON output mode"],
+  ],
 
   builder: (yargs) =>
     yargs

@@ -66,6 +66,11 @@ export const scriptsEnvRemoveCommand = defineCommand<RemoveArgs>({
   command: COMMAND,
   aliases: ALIASES,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 scripts env remove MY_VAR", "Remove by name"],
+    ["$0 scripts env remove", "Interactive select"],
+    ["$0 scripts env remove MY_VAR --force", "Skip confirmation"],
+  ],
 
   builder: (yargs) =>
     yargs

@@ -34,6 +34,10 @@ export const dbRegionsListCommand = defineCommand<ListArgs>({
   command: COMMAND,
   aliases: ALIASES,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 db regions list", "List regions for auto-detected database"],
+    ["$0 db regions list --output json", "JSON output for scripting"],
+  ],
 
   handler: async ({
     [ARG_DATABASE_ID]: databaseIdArg,

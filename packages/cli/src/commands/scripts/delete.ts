@@ -51,6 +51,11 @@ interface DeleteArgs {
 export const scriptsDeleteCommand = defineCommand<DeleteArgs>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 scripts delete 12345", "Interactive — double confirmation"],
+    ["$0 scripts delete", "Delete linked script"],
+    ["$0 scripts delete 12345 --force", "Skip confirmation"],
+  ],
 
   builder: (yargs) =>
     yargs

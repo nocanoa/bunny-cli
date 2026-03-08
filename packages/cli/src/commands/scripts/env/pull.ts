@@ -47,6 +47,11 @@ interface PullArgs {
 export const scriptsEnvPullCommand = defineCommand<PullArgs>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 scripts env pull", "Pull for linked script"],
+    ["$0 scripts env pull 12345", "Pull by script ID"],
+    ["$0 scripts env pull --force", "Overwrite without prompting"],
+  ],
 
   builder: (yargs) =>
     yargs

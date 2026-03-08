@@ -27,6 +27,11 @@ const DESCRIPTION = "Show the currently authenticated account.";
 export const whoamiCommand = defineCommand({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 whoami", "Show current user"],
+    ["$0 whoami --output json", "JSON output"],
+    ["$0 whoami --profile staging", "Check a specific profile"],
+  ],
 
   handler: async ({ profile, output, verbose, apiKey }) => {
     const config = resolveConfig(profile, apiKey);

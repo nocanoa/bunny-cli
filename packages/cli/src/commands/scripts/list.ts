@@ -31,6 +31,10 @@ export const scriptsListCommand = defineCommand({
   command: COMMAND,
   aliases: ["ls"],
   describe: DESCRIPTION,
+  examples: [
+    ["$0 scripts list", "List all Edge Scripts"],
+    ["$0 scripts list --output json", "JSON output"],
+  ],
 
   handler: async ({ profile, output, verbose, apiKey }) => {
     const config = resolveConfig(profile, apiKey);

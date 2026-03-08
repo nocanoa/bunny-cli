@@ -45,6 +45,11 @@ interface DeleteArgs {
 export const dbDeleteCommand = defineCommand<DeleteArgs>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 db delete db_01KCH…", "Interactive — double confirmation"],
+    ["$0 db delete db_01KCH… --force", "Skip confirmation prompts"],
+    ["$0 db delete db_01KCH… --force --output json", "JSON output for scripting"],
+  ],
 
   builder: (yargs) =>
     yargs

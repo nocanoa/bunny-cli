@@ -87,6 +87,12 @@ interface UsageArgs {
 export const dbUsageCommand = defineCommand<UsageArgs>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 db usage", "Current month usage"],
+    ["$0 db usage --period 7d", "Last 7 days"],
+    ["$0 db usage --from 2026-01-01 --to 2026-01-31", "Custom date range"],
+    ["$0 db usage --output json", "JSON output for scripting"],
+  ],
 
   builder: (yargs) =>
     yargs

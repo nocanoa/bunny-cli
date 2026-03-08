@@ -48,6 +48,11 @@ interface DeployArgs {
 export const scriptsDeployCommand = defineCommand<DeployArgs>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 scripts deploy dist/index.js", "Deploy and publish"],
+    ["$0 scripts deploy dist/index.js --skip-publish", "Deploy without publishing"],
+    ["$0 scripts deploy dist/index.js 12345", "Deploy to a specific script"],
+  ],
 
   builder: (yargs) =>
     yargs

@@ -51,6 +51,11 @@ interface AddArgs {
 export const dbRegionsAddCommand = defineCommand<AddArgs>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 db regions add", "Interactive — select regions"],
+    ["$0 db regions add --primary FR,DE", "Add primary regions"],
+    ["$0 db regions add --primary FR --replicas UK", "Add both"],
+  ],
 
   builder: (yargs) =>
     yargs

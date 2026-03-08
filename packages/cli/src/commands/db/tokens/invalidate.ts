@@ -65,6 +65,11 @@ export const dbTokensInvalidateCommand = defineCommand<{
 }>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 db tokens invalidate", "Interactive — prompts for confirmation"],
+    ["$0 db tokens invalidate --force", "Skip all prompts"],
+    ["$0 db tokens invalidate --force --regenerate --save-env", "Non-interactive with replacement"],
+  ],
 
   builder: (yargs) =>
     yargs

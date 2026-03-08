@@ -33,6 +33,10 @@ const DESCRIPTION = "List all databases.";
 export const dbListCommand = defineCommand({
   command: COMMAND,
   aliases: ALIASES,
+  examples: [
+    ["$0 db list", "List all databases"],
+    ["$0 db list --output json", "JSON output for scripting"],
+  ],
   describe: DESCRIPTION,
 
   handler: async ({ profile, output, verbose, apiKey }) => {

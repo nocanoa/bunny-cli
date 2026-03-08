@@ -59,6 +59,11 @@ interface SetArgs {
 export const scriptsEnvSetCommand = defineCommand<SetArgs>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 scripts env set MY_VAR \"hello\"", "Set a plain variable"],
+    ["$0 scripts env set API_KEY \"sk-…\" --secret", "Set a secret"],
+    ["$0 scripts env set", "Interactive mode"],
+  ],
 
   builder: (yargs) =>
     yargs

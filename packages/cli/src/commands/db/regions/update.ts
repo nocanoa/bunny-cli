@@ -45,6 +45,10 @@ interface UpdateArgs {
 export const dbRegionsUpdateCommand = defineCommand<UpdateArgs>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 db regions update", "Interactive — prompts for region selection"],
+    ["$0 db regions update --primary FR,DE --replicas UK", "Non-interactive"],
+  ],
 
   builder: (yargs) =>
     yargs

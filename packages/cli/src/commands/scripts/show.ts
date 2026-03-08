@@ -43,6 +43,11 @@ interface ShowArgs {
 export const scriptsShowCommand = defineCommand<ShowArgs>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 scripts show", "Show linked script"],
+    ["$0 scripts show 12345", "Show a specific script"],
+    ["$0 scripts show --output json", "JSON output"],
+  ],
 
   builder: (yargs) =>
     yargs.positional(ARG_ID, {

@@ -12,6 +12,18 @@ import { groupedRegionChoices } from "./region-choices.ts";
 
 type PossibleRegion = components["schemas"]["PossibleRegion"];
 
+const CDN_PROBE_URL = "https://bunny.net/index.html";
+
+/** Discover the CDN server token by hitting a Bunny CDN edge. */
+async function getCdnServerToken(): Promise<string | null> {
+  try {
+    const res = await fetch(CDN_PROBE_URL, { method: "HEAD" });
+    return res.headers.get("server");
+  } catch {
+    return null;
+  }
+}
+
 const COMMAND = "create";
 const DESCRIPTION = "Create a new database.";
 
@@ -53,6 +65,11 @@ interface CreateArgs {
 export const dbCreateCommand = defineCommand<CreateArgs>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 db create", "Interactive — prompts for name and regions"],
+    ["$0 db create --name my-app --primary FR,DE --replicas UK", "Non-interactive with explicit regions"],
+    ["$0 db create --name my-app --primary FR --output json", "JSON output for scripting"],
+  ],
 
   builder: (yargs) =>
     yargs
@@ -110,6 +127,7 @@ export const dbCreateCommand = defineCommand<CreateArgs>({
 
     let primaryRegions: PossibleRegion[];
     let replicasRegions: PossibleRegion[];
+    let storageRegion = args["storage-region"];
 
     // Non-interactive path: flags provided
     if (args.primary) {
@@ -145,14 +163,55 @@ export const dbCreateCommand = defineCommand<CreateArgs>({
       if (!regionMode) throw new UserError("Region selection is required.");
 
       if (regionMode === "automatic") {
-        primaryRegions = availablePrimary.slice(0, 3).map((r) => r.id);
-        replicasRegions = availableReplicas.slice(0, 3).map((r) => r.id);
+        const optSpin = spinner("Detecting optimal regions...");
+        optSpin.start();
+
+        const cdnToken = await getCdnServerToken();
+        if (cdnToken) {
+          const { data: optimal } = await client.GET("/v1/config/optimal", {
+            params: { query: { cdn_server_token: cdnToken } },
+          });
+          optSpin.stop();
+
+          if (optimal?.primary_regions?.length) {
+            primaryRegions = optimal.primary_regions.map((r) => r.id as PossibleRegion);
+            replicasRegions = optimal.replica_regions?.map((r) => r.id as PossibleRegion) ?? [];
+            storageRegion = optimal.storage_region?.id;
+          } else {
+            // Fallback if optimal returned empty
+            primaryRegions = availablePrimary.slice(0, 3).map((r) => r.id);
+            replicasRegions = availableReplicas.slice(0, 3).map((r) => r.id);
+          }
+        } else {
+          optSpin.stop();
+          logger.dim("Could not detect location — using default regions.");
+          primaryRegions = availablePrimary.slice(0, 3).map((r) => r.id);
+          replicasRegions = availableReplicas.slice(0, 3).map((r) => r.id);
+        }
       } else if (regionMode === "single") {
+        const optSpin = spinner("Detecting optimal region...");
+        optSpin.start();
+
+        const cdnToken = await getCdnServerToken();
+        let preselected: PossibleRegion | undefined;
+        if (cdnToken) {
+          const { data: optimal } = await client.GET("/v1/config/optimal_single", {
+            params: { query: { cdn_server_token: cdnToken } },
+          });
+          preselected = optimal?.region?.id as PossibleRegion | undefined;
+          if (optimal?.storage_region?.id) {
+            storageRegion = optimal.storage_region.id;
+          }
+        }
+        optSpin.stop();
+
+        const choices = groupedRegionChoices(availablePrimary, preselected ? new Set([preselected]) : undefined);
         const { value: location } = await prompts({
           type: "select",
           name: "value",
           message: "Database location:",
-          choices: groupedRegionChoices(availablePrimary),
+          choices,
+          initial: preselected ? choices.findIndex((c: any) => c.value === preselected) : 0,
         });
         if (!location) throw new UserError("Location is required.");
 
@@ -184,8 +243,7 @@ export const dbCreateCommand = defineCommand<CreateArgs>({
       }
     }
 
-    // Resolve storage region: explicit override, or auto-detect from first primary
-    let storageRegion = args["storage-region"];
+    // Resolve storage region: explicit override, optimal endpoint, or auto-detect from first primary
     if (!storageRegion) {
       const firstPrimary = availablePrimary.find(
         (r) => r.id === primaryRegions[0],

@@ -60,6 +60,11 @@ export const scriptsDeploymentsListCommand = defineCommand<ListArgs>({
   command: COMMAND,
   aliases: ALIASES,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 scripts deployments list", "List deployments for linked script"],
+    ["$0 scripts deployments list 12345", "List by script ID"],
+    ["$0 scripts deployments list --output json", "JSON output"],
+  ],
 
   builder: (yargs) =>
     yargs.positional(ARG_ID, {

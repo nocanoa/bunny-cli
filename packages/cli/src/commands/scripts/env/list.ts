@@ -49,6 +49,11 @@ export const scriptsEnvListCommand = defineCommand<ListArgs>({
   command: COMMAND,
   aliases: ALIASES,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 scripts env list", "List for linked script"],
+    ["$0 scripts env list 12345", "List by script ID"],
+    ["$0 scripts env list --output json", "JSON output"],
+  ],
 
   builder: (yargs) =>
     yargs.positional(ARG_ID, {

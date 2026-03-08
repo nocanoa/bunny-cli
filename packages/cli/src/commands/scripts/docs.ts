@@ -18,6 +18,9 @@ const URL = `${DOCS_BASE_URL}/scripting`;
 export const scriptsDocsCommand = defineCommand({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 scripts docs", "Open Edge Scripts documentation"],
+  ],
 
   handler: async () => {
     logger.info(`Opening ${URL}`);

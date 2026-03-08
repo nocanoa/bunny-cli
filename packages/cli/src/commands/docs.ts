@@ -18,6 +18,9 @@ const DESCRIPTION = "Open bunny.net documentation in the browser.";
 export const docsCommand = defineCommand({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 docs", "Open bunny.net documentation"],
+  ],
 
   handler: async () => {
     logger.info(`Opening ${DOCS_BASE_URL}`);

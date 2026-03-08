@@ -159,6 +159,12 @@ export const dbQuickstartCommand = defineCommand<{
 }>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 db quickstart", "Interactive — prompts for language"],
+    ["$0 db quickstart --lang typescript", "Non-interactive"],
+    ["$0 db quickstart --lang go --url libsql://… --token ey…", "Skip API lookup"],
+    ["$0 db quickstart --output json", "JSON output for tooling"],
+  ],
 
   builder: (yargs) =>
     yargs

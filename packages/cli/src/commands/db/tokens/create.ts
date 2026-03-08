@@ -101,6 +101,12 @@ export const dbTokensCreateCommand = defineCommand<{
 }>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 db tokens create", "Interactive — full-access token"],
+    ["$0 db tokens create --read-only --expiry 30d", "Read-only with 30-day expiry"],
+    ["$0 db tokens create --no-save", "Skip .env prompt"],
+    ["$0 db tokens create --output json", "JSON output for scripting"],
+  ],
 
   builder: (yargs) =>
     yargs

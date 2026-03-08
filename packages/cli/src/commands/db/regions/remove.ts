@@ -48,6 +48,11 @@ interface RemoveArgs {
 export const dbRegionsRemoveCommand = defineCommand<RemoveArgs>({
   command: COMMAND,
   aliases: ALIASES,
+  examples: [
+    ["$0 db regions remove", "Interactive — select regions to remove"],
+    ["$0 db regions remove --primary FR,DE", "Remove specific primary regions"],
+    ["$0 db regions remove --replicas UK", "Remove replica regions"],
+  ],
   describe: DESCRIPTION,
 
   builder: (yargs) =>

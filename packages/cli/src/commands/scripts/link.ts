@@ -47,6 +47,10 @@ interface LinkArgs {
 export const scriptsLinkCommand = defineCommand<LinkArgs>({
   command: COMMAND,
   describe: DESCRIPTION,
+  examples: [
+    ["$0 scripts link", "Interactive selection"],
+    ["$0 scripts link --id 12345", "Direct link by ID"],
+  ],
 
   builder: (yargs) =>
     yargs.option(ARG_ID, {
