@@ -1,10 +1,16 @@
 {
   "name": "@bunny.net/database-shell-windows-x64",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "bunny.net database shell binary for Windows x64",
-  "os": ["win32"],
-  "cpu": ["x64"],
-  "files": ["bsql.exe"],
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bsql.exe"
+  ],
   "publishConfig": {
     "access": "public"
   }

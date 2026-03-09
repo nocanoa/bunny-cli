@@ -1,10 +1,16 @@
 {
   "name": "@bunny.net/database-shell-darwin-arm64",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "bunny.net database shell binary for macOS arm64",
-  "os": ["darwin"],
-  "cpu": ["arm64"],
-  "files": ["bsql"],
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "files": [
+    "bsql"
+  ],
   "publishConfig": {
     "access": "public"
   }
