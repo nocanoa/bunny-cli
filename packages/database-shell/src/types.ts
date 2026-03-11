@@ -27,6 +27,10 @@ export interface ShellOptions {
   masked?: boolean;
   timing?: boolean;
   logger?: ShellLogger;
+  /** Database identifier used to scope saved views. When set, enables .save/.view/.views/.unsave commands. */
+  databaseId?: string;
+  /** Override the directory where views are stored. Defaults to ~/.config/bunny/views/<databaseId>/. */
+  viewsDir?: string;
 }
 
 /** Options for non-interactive query/file execution. */

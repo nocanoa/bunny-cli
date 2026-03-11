@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -14,6 +14,14 @@ import {
   loadHistory,
   saveHistory,
   splitStatements,
+  getDefaultViewsDir,
+  findLocalViewsDir,
+  resolveViewsDir,
+  isValidViewName,
+  saveView,
+  loadView,
+  deleteView,
+  listViews,
   type PrintMode,
   type ShellLogger,
 } from "./index.ts";
@@ -259,7 +267,6 @@ describe("history", () => {
   test("loadHistory filters empty lines", () => {
     const path = getHistoryPath();
     const dir = join(tmpDir, "bunny");
-    const { mkdirSync } = require("node:fs");
     mkdirSync(dir, { recursive: true });
     writeFileSync(path, "line1\n\n\nline2\n", "utf-8");
     expect(loadHistory()).toEqual(["line1", "line2"]);
@@ -600,5 +607,138 @@ describe("splitStatements", () => {
   test("does not split on semicolons in comments", () => {
     const sql = "-- this; is a comment\nSELECT 1;";
     expect(splitStatements(sql)).toEqual(["SELECT 1"]);
+  });
+});
+
+// --- views ---
+
+describe("views", () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), "views-test-"));
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test("getDefaultViewsDir uses XDG_CONFIG_HOME", () => {
+    const original = process.env.XDG_CONFIG_HOME;
+    process.env.XDG_CONFIG_HOME = "/tmp/test-config";
+    try {
+      const dir = getDefaultViewsDir("db-123");
+      expect(dir).toBe("/tmp/test-config/bunny/views/db-123");
+    } finally {
+      if (original === undefined) {
+        delete process.env.XDG_CONFIG_HOME;
+      } else {
+        process.env.XDG_CONFIG_HOME = original;
+      }
+    }
+  });
+
+  test("isValidViewName accepts valid names", () => {
+    expect(isValidViewName("monthly-revenue")).toBe(true);
+    expect(isValidViewName("top_users")).toBe(true);
+    expect(isValidViewName("query1")).toBe(true);
+    expect(isValidViewName("MyView")).toBe(true);
+  });
+
+  test("isValidViewName rejects invalid names", () => {
+    expect(isValidViewName("")).toBe(false);
+    expect(isValidViewName("has space")).toBe(false);
+    expect(isValidViewName("path/traversal")).toBe(false);
+    expect(isValidViewName("file.sql")).toBe(false);
+    expect(isValidViewName("../escape")).toBe(false);
+  });
+
+  test("saveView creates file and loadView reads it", () => {
+    saveView(tmpDir, "my-query", "SELECT * FROM users;");
+    const sql = loadView(tmpDir, "my-query");
+    expect(sql).toBe("SELECT * FROM users;");
+  });
+
+  test("loadView returns null for nonexistent view", () => {
+    expect(loadView(tmpDir, "nonexistent")).toBeNull();
+  });
+
+  test("deleteView removes view and returns true", () => {
+    saveView(tmpDir, "to-delete", "SELECT 1;");
+    expect(deleteView(tmpDir, "to-delete")).toBe(true);
+    expect(loadView(tmpDir, "to-delete")).toBeNull();
+  });
+
+  test("deleteView returns false for nonexistent view", () => {
+    expect(deleteView(tmpDir, "nonexistent")).toBe(false);
+  });
+
+  test("listViews returns sorted view names", () => {
+    saveView(tmpDir, "beta", "SELECT 2;");
+    saveView(tmpDir, "alpha", "SELECT 1;");
+    saveView(tmpDir, "gamma", "SELECT 3;");
+    expect(listViews(tmpDir)).toEqual(["alpha", "beta", "gamma"]);
+  });
+
+  test("listViews returns empty array when no views", () => {
+    expect(listViews(tmpDir)).toEqual([]);
+  });
+
+  test("listViews returns empty array when directory does not exist", () => {
+    expect(listViews(join(tmpDir, "nonexistent"))).toEqual([]);
+  });
+
+  test("saveView creates directory if it does not exist", () => {
+    const nestedDir = join(tmpDir, "nested", "dir");
+    saveView(nestedDir, "test", "SELECT 1;");
+    expect(loadView(nestedDir, "test")).toBe("SELECT 1;");
+  });
+
+  test("saveView overwrites existing view", () => {
+    saveView(tmpDir, "my-query", "SELECT 1;");
+    saveView(tmpDir, "my-query", "SELECT 2;");
+    expect(loadView(tmpDir, "my-query")).toBe("SELECT 2;");
+  });
+
+  test("findLocalViewsDir returns path when .bunny exists", () => {
+    mkdirSync(join(tmpDir, ".bunny"), { recursive: true });
+    const result = findLocalViewsDir("db-123", tmpDir);
+    expect(result).toBe(join(tmpDir, ".bunny", "db-123", "queries"));
+  });
+
+  test("findLocalViewsDir walks up to find .bunny", () => {
+    const nested = join(tmpDir, "a", "b", "c");
+    mkdirSync(nested, { recursive: true });
+    mkdirSync(join(tmpDir, ".bunny"), { recursive: true });
+    const result = findLocalViewsDir("db-123", nested);
+    expect(result).toBe(join(tmpDir, ".bunny", "db-123", "queries"));
+  });
+
+  test("findLocalViewsDir returns null when no .bunny found", () => {
+    const result = findLocalViewsDir("db-123", tmpDir);
+    expect(result).toBeNull();
+  });
+
+  test("resolveViewsDir prefers local .bunny over global", () => {
+    mkdirSync(join(tmpDir, ".bunny"), { recursive: true });
+    const original = process.cwd;
+    process.cwd = () => tmpDir;
+    try {
+      const dir = resolveViewsDir("db-123");
+      expect(dir).toBe(join(tmpDir, ".bunny", "db-123", "queries"));
+    } finally {
+      process.cwd = original;
+    }
+  });
+
+  test("resolveViewsDir falls back to global when no .bunny", () => {
+    const original = process.cwd;
+    process.cwd = () => tmpDir;
+    try {
+      const dir = resolveViewsDir("db-123");
+      expect(dir).toBe(getDefaultViewsDir("db-123"));
+    } finally {
+      process.cwd = original;
+    }
   });
 });

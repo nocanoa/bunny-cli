@@ -128,6 +128,7 @@ bunny-cli/
 │   │       ├── dot-commands.ts           # .tables, .schema, .fk, .er, .truncate, .dump, .count, .size, etc.
 │   │       ├── format.ts                 # printResultSet(), masking, csvEscape
 │   │       ├── parser.ts                 # splitStatements() SQL parsing
+│   │       ├── views.ts                 # Saved views persistence (per-database)
 │   │       ├── history.ts               # Shell history persistence
 │   │       ├── types.ts                  # ShellLogger, ShellOptions, PrintMode
 │   │       └── shell.test.ts            # Tests for shell utilities
@@ -1049,8 +1050,9 @@ The shell is split across two packages:
 **Shell engine components** (in `packages/database-shell/src/`):
 
 - **REPL** (`shell.ts`) — `startShell()`, `executeQuery()`, `executeFile()`. Uses `node:readline` with multi-line SQL support.
-- **Dot-commands** (`dot-commands.ts`) — `.tables`, `.schema`, `.describe`, `.indexes`, `.fk`, `.er`, `.count`, `.size`, `.truncate`, `.dump`, `.read`, `.mode`, `.timing`, `.mask`, `.unmask`, `.clear-history`, `.help`, `.quit`.
+- **Dot-commands** (`dot-commands.ts`) — `.tables`, `.schema`, `.describe`, `.indexes`, `.fk`, `.er`, `.count`, `.size`, `.truncate`, `.dump`, `.read`, `.mode`, `.timing`, `.mask`, `.unmask`, `.save`, `.view`, `.views`, `.unsave`, `.clear-history`, `.help`, `.quit`.
 - **Formatting** (`format.ts`) — `printResultSet()` with 5 output modes: `default`, `table`, `json`, `csv`, `markdown`. Sensitive column masking (full mask for passwords/secrets, email mask for email columns).
+- **Views** (`views.ts`) — Saved queries scoped per database. Resolves local `.bunny/<databaseId>/queries/` first (walks up from CWD), falls back to `~/.config/bunny/views/<databaseId>/` (respects `XDG_CONFIG_HOME`). Callers can override via `ShellOptions.viewsDir`.
 - **History** (`history.ts`) — Stored at `~/.config/bunny/shell_history` (respects `XDG_CONFIG_HOME`). Max 1000 entries.
 - **SQL parsing** (`parser.ts`) — `splitStatements()` for `.sql` file execution.
 

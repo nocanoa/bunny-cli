@@ -2,6 +2,7 @@ import type * as readline from "node:readline";
 import type { Client } from "@libsql/client";
 import { printResultSet } from "./format.ts";
 import { saveHistory } from "./history.ts";
+import { saveView, loadView, deleteView, listViews, isValidViewName } from "./views.ts";
 import type { PrintMode, ShellLogger } from "./types.ts";
 
 /** Prompt the user with a yes/no question via the REPL interface. */
@@ -33,6 +34,8 @@ export interface ShellState {
   mode: PrintMode;
   masked: boolean;
   timing: boolean;
+  lastStatement: string | null;
+  viewsDir: string | null;
 }
 
 /**
@@ -356,6 +359,95 @@ export async function executeDotCommand(
       return "handled";
     }
 
+    case ".save": {
+      if (!state.viewsDir) {
+        logger.error("Views require a database ID. Connect to a specific database to use views.");
+        return "handled";
+      }
+      const name = parts[1];
+      if (!name) {
+        logger.error("Usage: .save NAME");
+        return "handled";
+      }
+      if (!isValidViewName(name)) {
+        logger.error("View name must be alphanumeric, hyphens, or underscores.");
+        return "handled";
+      }
+      if (!state.lastStatement) {
+        logger.error("No query to save. Run a SQL statement first.");
+        return "handled";
+      }
+      saveView(state.viewsDir, name, state.lastStatement);
+      logger.success(`View "${name}" saved.`);
+      return "handled";
+    }
+
+    case ".view": {
+      if (!state.viewsDir) {
+        logger.error("Views require a database ID. Connect to a specific database to use views.");
+        return "handled";
+      }
+      const name = parts[1];
+      if (!name) {
+        logger.error("Usage: .view NAME");
+        return "handled";
+      }
+      const sql = loadView(state.viewsDir, name);
+      if (!sql) {
+        logger.error(`View not found: ${name}`);
+        return "handled";
+      }
+      logger.dim(`  ${sql}`);
+      const { splitStatements } = await import("./parser.ts");
+      const statements = splitStatements(sql);
+      for (const stmt of statements) {
+        try {
+          const result = await client.execute(stmt);
+          printResultSet(result, state.mode, state.masked, logger);
+        } catch (err: any) {
+          logger.error(err.message);
+          return "handled";
+        }
+      }
+      return "handled";
+    }
+
+    case ".views": {
+      if (!state.viewsDir) {
+        logger.error("Views require a database ID. Connect to a specific database to use views.");
+        return "handled";
+      }
+      const views = listViews(state.viewsDir);
+      if (views.length === 0) {
+        logger.dim("  No saved views.");
+      } else {
+        for (const name of views) {
+          const sql = loadView(state.viewsDir, name);
+          const preview = sql && sql.length > 60 ? sql.slice(0, 60) + "..." : sql;
+          logger.log(`  ${name}  ${preview ? `— ${preview}` : ""}`);
+        }
+      }
+      return "handled";
+    }
+
+    case ".unsave": {
+      if (!state.viewsDir) {
+        logger.error("Views require a database ID. Connect to a specific database to use views.");
+        return "handled";
+      }
+      const name = parts[1];
+      if (!name) {
+        logger.error("Usage: .unsave NAME");
+        return "handled";
+      }
+      if (deleteView(state.viewsDir, name)) {
+        logger.success(`View "${name}" deleted.`);
+      } else {
+        logger.error(`View not found: ${name}`);
+      }
+      return "handled";
+    }
+
     case ".clear-history": {
       saveHistory([]);
       logger.log("  History cleared.");
@@ -363,26 +455,38 @@ export async function executeDotCommand(
     }
 
     case ".help": {
-      logger.log("  .tables           List all tables");
-      logger.log("  .describe TABLE   Show column details for a table");
-      logger.log("  .schema [TABLE]   Show CREATE statements");
-      logger.log("  .indexes [TABLE]  List indexes");
-      logger.log("  .fk TABLE         Show foreign keys for a table");
-      logger.log("  .er               Show entity-relationship overview");
-      logger.log("  .count TABLE      Count rows in a table");
-      logger.log("  .size TABLE       Show table stats (rows, columns, indexes)");
-      logger.log("  .truncate TABLE   Delete all rows from a table");
-      logger.log("  .dump [TABLE]     Dump schema and data as SQL");
-      logger.log("  .read FILE        Execute SQL statements from a file");
+      logger.log("  Schema");
+      logger.log("    .tables           List all tables");
+      logger.log("    .describe TABLE   Show column details for a table");
+      logger.log("    .schema [TABLE]   Show CREATE statements");
+      logger.log("    .indexes [TABLE]  List indexes");
+      logger.log("    .fk TABLE         Show foreign keys for a table");
+      logger.log("    .er               Show entity-relationship overview");
+      logger.log();
+      logger.log("  Data");
+      logger.log("    .count TABLE      Count rows in a table");
+      logger.log("    .size TABLE       Show table stats (rows, columns, indexes)");
+      logger.log("    .truncate TABLE   Delete all rows from a table");
+      logger.log("    .dump [TABLE]     Dump schema and data as SQL");
+      logger.log("    .read FILE        Execute SQL statements from a file");
+      logger.log();
+      logger.log("  Views");
+      logger.log("    .save NAME        Save the last query as a named view");
+      logger.log("    .view NAME        Execute a saved view");
+      logger.log("    .views            List all saved views");
+      logger.log("    .unsave NAME      Delete a saved view");
+      logger.log();
+      logger.log("  Settings");
       logger.log(
-        "  .mode [MODE]      Set output mode (default, table, json, csv, markdown)",
+        "    .mode [MODE]      Set output mode (default, table, json, csv, markdown)",
       );
-      logger.log("  .timing           Toggle query execution timing");
-      logger.log("  .mask             Enable sensitive column masking");
-      logger.log("  .unmask           Disable sensitive column masking");
-      logger.log("  .clear-history    Clear command history");
-      logger.log("  .quit             Exit the shell");
-      logger.log("  .help             Show this help");
+      logger.log("    .timing           Toggle query execution timing");
+      logger.log("    .mask             Enable sensitive column masking");
+      logger.log("    .unmask           Disable sensitive column masking");
+      logger.log("    .clear-history    Clear command history");
+      logger.log();
+      logger.log("    .quit             Exit the shell");
+      logger.log("    .help             Show this help");
       return "handled";
     }
 

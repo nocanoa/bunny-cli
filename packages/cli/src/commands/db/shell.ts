@@ -51,11 +51,11 @@ async function resolveCredentials(
   profile: string,
   apiKeyOverride?: string,
   verbose = false,
-): Promise<{ url: string; token: string }> {
+): Promise<{ url: string; token: string; databaseId: string | undefined }> {
   let url = urlArg ?? readEnvValue(ENV_DATABASE_URL)?.value;
   let token = tokenArg ?? readEnvValue(ENV_DATABASE_AUTH_TOKEN)?.value;
 
-  if (url && token) return { url, token };
+  if (url && token) return { url, token, databaseId: databaseIdArg };
 
   const config = resolveConfig(profile, apiKeyOverride);
   const apiClient = createDbClient(clientOptions(config, verbose));
@@ -98,7 +98,7 @@ async function resolveCredentials(
     throw new UserError("Could not resolve database URL or generate token.");
   }
 
-  return { url, token };
+  return { url, token, databaseId };
 }
 
 export const dbShellCommand = defineCommand<{
@@ -188,7 +188,7 @@ export const dbShellCommand = defineCommand<{
     const initialMode: PrintMode =
       (modeArg as PrintMode) ?? OUTPUT_TO_MODE[output] ?? "default";
 
-    const { url, token } = await resolveCredentials(
+    const { url, token, databaseId: resolvedDbId } = await resolveCredentials(
       urlArg,
       tokenArg,
       databaseId,
@@ -229,6 +229,7 @@ export const dbShellCommand = defineCommand<{
         mode: initialMode,
         masked: !unmaskArg,
         logger: log,
+        databaseId: resolvedDbId,
       });
     } catch (err: any) {
       throw new UserError(
