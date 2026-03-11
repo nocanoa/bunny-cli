@@ -36,6 +36,7 @@ bsql <url> --unmask
 | `--mode <mode>`   | Output mode: `default`, `table`, `json`, `csv`, `markdown` |
 | `--unmask`        | Show sensitive column values unmasked                |
 | `--timing`        | Show query execution timing                          |
+| `--views-dir`     | Directory for saved views (default: `~/.config/bunny/views/<db-id>/`) |
 | `--help`          | Show help                                            |
 
 ## Library Usage
@@ -90,6 +91,8 @@ interface ShellOptions {
   masked?: boolean;     // Mask sensitive columns (default: true)
   timing?: boolean;     // Show query timing (default: false)
   logger?: ShellLogger; // Custom logger (default: console)
+  databaseId?: string;  // Scope saved views per database
+  viewsDir?: string;    // Override views storage directory
 }
 ```
 
@@ -149,9 +152,58 @@ Available in interactive mode:
 | `.timing`          | Toggle query timing                 |
 | `.mask`            | Enable sensitive column masking     |
 | `.unmask`          | Disable sensitive column masking    |
+| `.save NAME`       | Save the last query as a named view |
+| `.view NAME`       | Execute a saved view                |
+| `.views`           | List all saved views                |
+| `.unsave NAME`     | Delete a saved view                 |
 | `.clear-history`   | Clear command history               |
 | `.help`            | Show available commands             |
 | `.quit` / `.exit`  | Exit the shell                      |
+
+## Saved Views
+
+Save frequently used queries as named views so you can recall them later. Views are scoped per database and stored as plain `.sql` files in `~/.config/bunny/views/<databaseId>/` (respects `XDG_CONFIG_HOME`).
+
+```sql
+→  SELECT name, count(*) as orders FROM users JOIN orders USING (user_id) GROUP BY name ORDER BY orders DESC LIMIT 10;
+
+  name    orders
+  Alice   42
+  Bob     31
+  ...
+
+→  .save top-customers
+
+✓ View "top-customers" saved.
+
+→  .views
+
+  top-customers  — SELECT name, count(*) as orders FROM users JOIN or...
+
+→  .view top-customers
+
+  SELECT name, count(*) as orders FROM users JOIN orders USING (user_id) GROUP BY name ORDER BY orders DESC LIMIT 10
+  name    orders
+  Alice   42
+  Bob     31
+  ...
+
+→  .unsave top-customers
+
+✓ View "top-customers" deleted.
+```
+
+To enable views, pass a `databaseId` when starting the shell:
+
+```typescript
+await startShell({ client, databaseId: "db_01ABC" });
+```
+
+You can also override the storage directory:
+
+```typescript
+await startShell({ client, viewsDir: "/path/to/my/views" });
+```
 
 ## Sensitive Column Masking
 

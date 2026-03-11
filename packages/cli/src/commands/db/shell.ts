@@ -22,6 +22,7 @@ const ARG_MODE_ALIAS = "m";
 const ARG_UNMASK = "unmask";
 const ARG_URL = "url";
 const ARG_TOKEN = "token";
+const ARG_VIEWS_DIR = "views-dir";
 
 const PRINT_MODES = ["default", "table", "json", "csv", "markdown"];
 
@@ -51,11 +52,11 @@ async function resolveCredentials(
   profile: string,
   apiKeyOverride?: string,
   verbose = false,
-): Promise<{ url: string; token: string }> {
+): Promise<{ url: string; token: string; databaseId: string | undefined }> {
   let url = urlArg ?? readEnvValue(ENV_DATABASE_URL)?.value;
   let token = tokenArg ?? readEnvValue(ENV_DATABASE_AUTH_TOKEN)?.value;
 
-  if (url && token) return { url, token };
+  if (url && token) return { url, token, databaseId: databaseIdArg };
 
   const config = resolveConfig(profile, apiKeyOverride);
   const apiClient = createDbClient(clientOptions(config, verbose));
@@ -98,7 +99,7 @@ async function resolveCredentials(
     throw new UserError("Could not resolve database URL or generate token.");
   }
 
-  return { url, token };
+  return { url, token, databaseId };
 }
 
 export const dbShellCommand = defineCommand<{
@@ -109,6 +110,7 @@ export const dbShellCommand = defineCommand<{
   [ARG_UNMASK]?: boolean;
   [ARG_URL]?: string;
   [ARG_TOKEN]?: string;
+  [ARG_VIEWS_DIR]?: string;
 }>({
   command: COMMAND,
   describe: DESCRIPTION,
@@ -153,6 +155,10 @@ export const dbShellCommand = defineCommand<{
       .option(ARG_TOKEN, {
         type: "string",
         describe: "Auth token (skips token generation)",
+      })
+      .option(ARG_VIEWS_DIR, {
+        type: "string",
+        describe: "Directory for saved views (default: ~/.config/bunny/views/<db-id>/)",
       }),
 
   handler: async ({
@@ -163,6 +169,7 @@ export const dbShellCommand = defineCommand<{
     [ARG_UNMASK]: unmaskArg,
     [ARG_URL]: urlArg,
     [ARG_TOKEN]: tokenArg,
+    [ARG_VIEWS_DIR]: viewsDirArg,
     profile,
     output,
     verbose,
@@ -188,7 +195,7 @@ export const dbShellCommand = defineCommand<{
     const initialMode: PrintMode =
       (modeArg as PrintMode) ?? OUTPUT_TO_MODE[output] ?? "default";
 
-    const { url, token } = await resolveCredentials(
+    const { url, token, databaseId: resolvedDbId } = await resolveCredentials(
       urlArg,
       tokenArg,
       databaseId,
@@ -229,6 +236,8 @@ export const dbShellCommand = defineCommand<{
         mode: initialMode,
         masked: !unmaskArg,
         logger: log,
+        databaseId: resolvedDbId,
+        viewsDir: viewsDirArg ? resolve(viewsDirArg) : undefined,
       });
     } catch (err: any) {
       throw new UserError(

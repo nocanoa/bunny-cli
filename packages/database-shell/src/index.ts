@@ -23,3 +23,11 @@ export {
   maskEmail,
 } from "./format.ts";
 export type { MaskType } from "./format.ts";
+export {
+  getDefaultViewsDir,
+  isValidViewName,
+  saveView,
+  loadView,
+  deleteView,
+  listViews,
+} from "./views.ts";
