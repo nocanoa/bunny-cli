@@ -5,13 +5,13 @@ import type { PrintMode, ShellLogger } from "./types.ts";
 
 // ─── Sensitive column masking ────────────────────────────────────────
 
-const SENSITIVE_SUBSTRINGS = [
+export const SENSITIVE_SUBSTRINGS = [
   "password", "passwd", "secret", "_hash", "_token",
   "auth_token", "api_key", "apikey", "access_key",
   "private_key", "credit_card", "creditcard", "ssn",
 ];
-const SENSITIVE_PREFIXES = ["encrypted_", "hashed_"];
-const EMAIL_SUBSTRINGS = ["email", "e_mail"];
+export const SENSITIVE_PREFIXES = ["encrypted_", "hashed_"];
+export const EMAIL_SUBSTRINGS = ["email", "e_mail"];
 const MASK_STYLED = chalk.dim("••••••••");
 const MASK_RAW = "********";
 
