@@ -18,16 +18,16 @@ bsql libsql://<your-database>.lite.bunnydb.net --token ey...
 bsql <url> [--token <token>]
 
 # Execute a query and exit
-bsql <url> "SELECT * FROM users"
+bsql <url> --token <token> "SELECT * FROM users"
 
 # Execute a SQL file
-bsql <url> seed.sql
+bsql <url> --token <token> seed.sql
 
 # Change output mode
-bsql <url> "SELECT * FROM users" --mode json
+bsql <url> --token <token> "SELECT * FROM users" --mode json
 
 # Show sensitive columns unmasked
-bsql <url> --unmask
+bsql <url> --token <token> --unmask
 ```
 
 | Flag              | Description                                          |

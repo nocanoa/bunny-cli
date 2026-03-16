@@ -1,6 +1,6 @@
 import type * as readline from "node:readline";
 import type { Client } from "@libsql/client";
-import { printResultSet } from "./format.ts";
+import { printResultSet, SENSITIVE_SUBSTRINGS, SENSITIVE_PREFIXES, EMAIL_SUBSTRINGS } from "./format.ts";
 import { saveHistory } from "./history.ts";
 import { saveView, loadView, deleteView, listViews, isValidViewName } from "./views.ts";
 import type { PrintMode, ShellLogger } from "./types.ts";
@@ -28,6 +28,11 @@ async function confirmReadQuota(
 ): Promise<boolean> {
   logger.warn(message);
   return askConfirm(rl, "Continue?");
+}
+
+function printMaskedPatterns(logger: ShellLogger, indent = "  "): void {
+  logger.dim(`${indent}Full mask: ${[...SENSITIVE_PREFIXES.map((p) => p + "*"), ...SENSITIVE_SUBSTRINGS].join(", ")}`);
+  logger.dim(`${indent}Email mask: ${EMAIL_SUBSTRINGS.join(", ")}`);
 }
 
 export interface ShellState {
@@ -285,12 +290,14 @@ export async function executeDotCommand(
     case ".mask": {
       state.masked = true;
       logger.log("  Sensitive columns are now masked.");
+      printMaskedPatterns(logger);
       return "handled";
     }
 
     case ".unmask": {
       state.masked = false;
       logger.log("  Sensitive columns are now visible.");
+      printMaskedPatterns(logger);
       return "handled";
     }
 
@@ -450,7 +457,9 @@ export async function executeDotCommand(
 
     case ".clear-history": {
       saveHistory([]);
-      logger.log("  History cleared.");
+      // Clear the in-memory history so it doesn't get re-saved on close
+      (rl as any).history.length = 0;
+      logger.success("History cleared.");
       return "handled";
     }
 
@@ -483,6 +492,7 @@ export async function executeDotCommand(
       logger.log("    .timing           Toggle query execution timing");
       logger.log("    .mask             Enable sensitive column masking");
       logger.log("    .unmask           Disable sensitive column masking");
+      printMaskedPatterns(logger, "      ");
       logger.log("    .clear-history    Clear command history");
       logger.log();
       logger.log("    .quit             Exit the shell");
