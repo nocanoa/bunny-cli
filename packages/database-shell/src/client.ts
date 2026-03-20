@@ -13,10 +13,13 @@ export function createShellClient(opts: {
 }): Client {
   return createClient({
     ...opts,
-    fetch: (input, init) => {
-      const req = new Request(input, init);
-      req.headers.set("User-Agent", USER_AGENT);
-      return fetch(req);
+    fetch: (input: string | Request | URL, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      if (input instanceof Request) {
+        input.headers.forEach((v, k) => headers.set(k, v));
+      }
+      headers.set("User-Agent", USER_AGENT);
+      return fetch(input, { ...init, headers });
     },
   });
 }
