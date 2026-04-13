@@ -88,6 +88,6 @@ export async function getLatestVersion(): Promise<string | null> {
 function printUpdateNotice(latest: string): void {
   console.error(
     `\n  Update available: ${VERSION} → ${latest}` +
-      `\n  Run: curl -fsSL https://github.com/BunnyWay/cli/raw/main/install.sh | sh\n`,
+      `\n  Run: npm install -g @bunny.net/cli\n`,
   );
 }

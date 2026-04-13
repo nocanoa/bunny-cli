@@ -83,7 +83,7 @@ export const cli = instance
         if (latest && latest !== VERSION) {
           console.log(
             `\nUpdate available: ${VERSION} → ${latest}` +
-              `\nRun: curl -fsSL https://github.com/BunnyWay/cli/raw/main/install.sh | sh`,
+              `\nRun: npm install -g @bunny.net/cli`,
           );
         }
         return;
