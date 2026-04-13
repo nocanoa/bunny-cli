@@ -1,8 +1,8 @@
-import type { CommandModule } from "yargs";
+import type { Argv, CommandModule } from "yargs";
 
 /**
  * Groups subcommands under a parent namespace. Running the namespace
- * without a subcommand shows help (enforced via `demandCommand(1)`).
+ * without a subcommand shows help.
  *
  * @example
  * ```ts
@@ -18,13 +18,17 @@ export function defineNamespace(
   describe: string,
   subcommands: CommandModule[],
 ): CommandModule {
+  let yRef: Argv;
   return {
     command,
     describe,
     builder: (yargs) => {
+      yRef = yargs;
       for (const sub of subcommands) yargs.command(sub);
-      return yargs.demandCommand(1, `Run \`bunny ${command} --help\` for usage.`);
+      return yargs;
     },
-    handler: () => {},
+    handler: () => {
+      yRef.showHelp("log");
+    },
   };
 }

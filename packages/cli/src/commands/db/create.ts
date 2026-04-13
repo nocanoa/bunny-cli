@@ -2,13 +2,15 @@ import prompts from "prompts";
 import { defineCommand } from "../../core/define-command.ts";
 import { resolveConfig } from "../../config/index.ts";
 import { createDbClient } from "@bunny.net/api";
-import { spinner } from "../../core/ui.ts";
+import { confirm, spinner } from "../../core/ui.ts";
 import { logger } from "../../core/logger.ts";
 import { UserError } from "../../core/errors.ts";
 import { formatKeyValue } from "../../core/format.ts";
 import type { components } from "@bunny.net/api/generated/database.d.ts";
 import { clientOptions } from "../../core/client-options.ts";
 import { groupedRegionChoices } from "./region-choices.ts";
+import { readEnvValue, writeEnvValue } from "../../utils/env-file.ts";
+import { ENV_DATABASE_URL, ENV_DATABASE_AUTH_TOKEN } from "./constants.ts";
 
 type PossibleRegion = components["schemas"]["PossibleRegion"];
 
@@ -310,7 +312,63 @@ export const dbCreateCommand = defineCommand<CreateArgs>({
     logger.log();
     logger.log(formatKeyValue(entries, output));
     logger.log();
-    logger.dim(`  Get started:  bunny db quickstart ${data.db_id}`);
-    logger.dim(`  Open shell:   bunny db shell ${data.db_id}`);
+
+    // Offer to create an auth token
+    const shouldCreateToken = await confirm("Create an auth token?", { force: false });
+
+    if (shouldCreateToken) {
+      const tokenSpin = spinner("Generating token...");
+      tokenSpin.start();
+
+      const { data: tokenData } = await client.PUT("/v2/databases/{db_id}/auth/generate", {
+        params: { path: { db_id: data.db_id } },
+        body: { authorization: "full-access", expires_at: null },
+      });
+
+      tokenSpin.stop();
+
+      const token = tokenData?.token;
+
+      if (token) {
+        const tokenEntries = [
+          { key: "Token", value: token },
+          { key: "Access", value: "full-access" },
+          { key: "Expires", value: "never" },
+        ];
+
+        logger.success("Token generated.");
+        logger.log();
+        logger.log(formatKeyValue(tokenEntries, output));
+        logger.log();
+
+        // Offer to save to .env
+        const existingToken = readEnvValue(ENV_DATABASE_AUTH_TOKEN);
+        let shouldWrite = false;
+
+        if (existingToken) {
+          shouldWrite = await confirm(
+            `${ENV_DATABASE_AUTH_TOKEN} already exists in ${existingToken.envPath} — overwrite?`,
+            { force: false },
+          );
+        } else {
+          shouldWrite = await confirm(`Save to .env?`, { force: false });
+        }
+
+        if (shouldWrite) {
+          const envPath = existingToken?.envPath;
+          writeEnvValue(ENV_DATABASE_AUTH_TOKEN, token, envPath);
+
+          if (db?.url && !readEnvValue(ENV_DATABASE_URL)) {
+            writeEnvValue(ENV_DATABASE_URL, db.url, envPath);
+            logger.success(`Saved ${ENV_DATABASE_URL} and ${ENV_DATABASE_AUTH_TOKEN} to .env`);
+          } else {
+            logger.success(`Saved ${ENV_DATABASE_AUTH_TOKEN} to .env`);
+          }
+        }
+      }
+    } else {
+      logger.dim(`  Get started:  bunny db quickstart ${data.db_id}`);
+      logger.dim(`  Open shell:   bunny db shell ${data.db_id}`);
+    }
   },
 });
