@@ -101,6 +101,10 @@ jobs:
       - name: Build binary
         run: bun build packages/cli/src/index.ts --compile --minify --sourcemap --target=${{ matrix.target }} --outfile ${{ matrix.binary }}
 
+      - name: Ad-hoc sign macOS binary
+        if: runner.os == 'macOS'
+        run: codesign -s - ${{ matrix.binary }}
+
       - name: Prepare npm package
         run: cp ${{ matrix.binary }} packages/${{ matrix.npm-pkg }}/
 
@@ -148,6 +152,10 @@ jobs:
 
       - name: Build binary
         run: bun build packages/database-shell/src/cli.ts --compile --minify --sourcemap --target=${{ matrix.target }} --outfile ${{ matrix.binary }}
+
+      - name: Ad-hoc sign macOS binary
+        if: runner.os == 'macOS'
+        run: codesign -s - ${{ matrix.binary }}
 
       - name: Prepare npm package
         run: cp ${{ matrix.binary }} packages/${{ matrix.npm-pkg }}/
