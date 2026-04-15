@@ -43,6 +43,7 @@ const SUCCESS_HTML = `<!doctype html>
     <h1>Authenticated!</h1>
     <p>You can close this tab and return to the CLI.</p>
   </div>
+  <script>history.replaceState(null, "", location.pathname)</script>
 </body>
 </html>`;
 
