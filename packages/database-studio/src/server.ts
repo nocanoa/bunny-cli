@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import type { Client } from "@libsql/client";
+import { assets } from "./client-manifest.ts";
 
 export interface StudioOptions {
   client: Client;
@@ -242,7 +243,6 @@ function createApiHandler(client: Client) {
 export async function startStudio(options: StudioOptions): Promise<void> {
   const { client, port = 4488, open = true, dev = false, logger = console } = options;
 
-  const distDir = join(import.meta.dir, "..", "dist", "client");
   const clientDir = join(import.meta.dir, "..", "client");
   const handleApi = createApiHandler(client);
 
@@ -270,21 +270,13 @@ export async function startStudio(options: StudioOptions): Promise<void> {
       }
 
       if (!dev) {
-        // Static file serving for the built client
-        try {
-          let filePath = join(distDir, pathname === "/" ? "index.html" : pathname);
-          let file = Bun.file(filePath);
-          if (await file.exists()) {
-            return new Response(file);
-          }
-          // SPA fallback — serve index.html for client-side routing
-          file = Bun.file(join(distDir, "index.html"));
-          if (await file.exists()) {
-            return new Response(file);
-          }
-        } catch {
-          // fall through
-        }
+        // Serve from embedded assets (works in both source mode and compiled binary)
+        const lookup = pathname === "/" ? "/index.html" : pathname;
+        const assetPath = assets[lookup];
+        if (assetPath) return new Response(Bun.file(assetPath));
+        // SPA fallback — serve index.html for client-side routing
+        const indexPath = assets["/index.html"];
+        if (indexPath) return new Response(Bun.file(indexPath));
       }
 
       return new Response("Not Found", { status: 404 });
