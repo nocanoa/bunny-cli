@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "bun run packages/cli/src/index.ts",
     "ny": "bun run packages/cli/src/index.ts",
-    "build": "bun build packages/cli/src/index.ts --compile --outfile bunny",
+    "build:studio": "bun run --filter @bunny.net/database-studio build:client",
+    "build": "bun run build:studio && bun build packages/cli/src/index.ts --compile --outfile bunny",
     "typecheck": "bun run tsc --noEmit",
     "api:generate": "bun run --filter @bunny.net/api generate",
     "api:update": "bun run --filter @bunny.net/api update-specs",
