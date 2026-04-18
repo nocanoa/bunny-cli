@@ -646,7 +646,7 @@ The CLI is distributed through three channels:
 **1. Shell installer (standalone binary)**
 
 ```bash
-curl -fsSL https://bunny.net/cli | sh
+curl -fsSL https://cli.bunny.net/install.sh | sh
 ```
 
 Downloads the prebuilt binary for the current platform from GitHub Releases and installs to `/usr/local/bin`. Supports `BUNNY_INSTALL_DIR` env var for custom paths. Script is at `install.sh` in the repo root.

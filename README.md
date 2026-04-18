@@ -20,7 +20,7 @@ See each package's README for usage and API documentation.
 
 ```bash
 # Shell installer (downloads prebuilt binary)
-curl -fsSL https://bunny.net/cli | sh
+curl -fsSL https://cli.bunny.net/install.sh | sh
 
 # Or via npm
 npm install -g @bunny.net/cli

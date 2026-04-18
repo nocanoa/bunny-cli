@@ -5,6 +5,10 @@ Command-line interface for [bunny.net](https://bunny.net) — manage databases, 
 ## Installation
 
 ```bash
+# Shell installer (downloads prebuilt binary)
+curl -fsSL https://cli.bunny.net/install.sh | sh
+
+# Or via npm
 npm install -g @bunny.net/cli
 ```
 
