@@ -1,5 +1,13 @@
 # @bunny.net/database-studio
 
+## 0.1.1
+
+### Patch Changes
+
+- [#44](https://github.com/BunnyWay/cli/pull/44) [`87d76e1`](https://github.com/BunnyWay/cli/commit/87d76e131a85a1419f0ebc05abb400e396c1fc5a) Thanks [@jamie-at-bunny](https://github.com/jamie-at-bunny)! - Fix table list overflow on the studio landing page
+
+  The initial table list was wrapped in a `h-full` flex container with `items-center justify-center`, sitting inside a `<main>` with `overflow-hidden`. When more tables were present than fit on screen, the centered list overflowed `<main>` and was clipped with no way to scroll. Wrapped the card in `overflow-y-auto` and switched the centering layer to `min-h-full` so it stays vertically centered when content fits and scrolls when it doesn't.
+
 ## 0.1.0
 
 ### Minor Changes
