@@ -235,12 +235,14 @@ bunny-cli/
 │           │   │   ├── add.ts            # Add registry with credentials
 │           │   │   └── remove.ts         # Remove registry
 │           │   ├── docs.ts               # Open bunny.net documentation in browser (top-level: bunny docs)
+│           │   ├── open.ts               # Open bunny.net dashboard in browser (top-level: bunny open)
 │           │   └── scripts/
 │           │       ├── index.ts          # defineNamespace("scripts", ...) — registers all script commands
 │           │       ├── constants.ts      # SCRIPT_MANIFEST, SCRIPT_TYPE_LABELS
+│           │       ├── create.ts         # Create a remote Edge Script (exports shared `createScript` helper)
 │           │       ├── deploy.ts         # Deploy code to an Edge Script (publishes by default)
 │           │       ├── docs.ts           # Open Edge Script documentation in browser
-│           │       ├── init.ts           # Scaffold a new Edge Script project from a template
+│           │       ├── init.ts           # Scaffold a new Edge Script project from a template (calls `createScript`)
 │           │       ├── link.ts           # Link directory to a remote Edge Script (.bunny/script.json)
 │           │       ├── list.ts           # List all Edge Scripts (Standalone + Middleware)
 │           │       ├── show.ts           # Show Edge Script details (supports manifest fallback)
@@ -650,7 +652,7 @@ The CLI is distributed through three channels:
 curl -fsSL https://cli.bunny.net/install.sh | sh
 ```
 
-Downloads the prebuilt binary for the current platform from GitHub Releases and installs to `/usr/local/bin`. Supports `BUNNY_INSTALL_DIR` env var for custom paths. Script is at `install.sh` in the repo root.
+Downloads the prebuilt binary for the current platform from GitHub Releases and installs to `~/.bunny/bin`. Supports `BUNNY_INSTALL_DIR` env var for custom paths (e.g. `BUNNY_INSTALL_DIR=/usr/local/bin`). On macOS the script clears the quarantine xattr and ad-hoc codesigns the binary so Gatekeeper allows execution. Uses GitHub's `releases/latest/download` redirect to avoid the api.github.com rate limit. Script is at `install.sh` in the repo root.
 
 **2. npm (platform-specific binary packages)**
 
@@ -759,6 +761,8 @@ bunny
 ├── scripts
 │   ├── init            [--name] [--type] [--template] [--deploy-method] [--deploy] [--skip-git] [--skip-install]
 │   │                                       Create a new Edge Script project from a template
+│   ├── create          [name] [--type] [--pull-zone] [--pull-zone-name] [--link]
+│   │                                       Create a remote Edge Script (use after init when --deploy was skipped)
 │   ├── deploy          <file> [id] [--skip-publish]
 │   │                                       Deploy code to an Edge Script (publishes by default)
 │   ├── deployments
@@ -773,6 +777,7 @@ bunny
 │   ├── list            (alias: ls)         List all Edge Scripts
 │   └── show            [id]                Show Edge Script details (uses linked script if omitted)
 ├── docs                                    Open bunny.net documentation in browser
+├── open               [--print]            Open bunny.net dashboard in browser (or print URL)
 ├── --profile, -p       <string>            Profile to use (default: "default")
 ├── --verbose, -v       <boolean>           Enable verbose output
 ├── --output, -o        <text|json|table|csv|markdown>  Output format (default: "text")

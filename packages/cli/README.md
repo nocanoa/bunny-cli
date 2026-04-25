@@ -67,6 +67,20 @@ bunny whoami --output json
 bunny whoami --profile staging
 ```
 
+### `bunny open`
+
+Open the bunny.net dashboard in your default browser. Uses `BUNNYNET_DASHBOARD_URL` if set, otherwise `https://dash.bunny.net`.
+
+```bash
+bunny open
+
+# Print the URL instead of opening it
+bunny open --print
+
+# Print as JSON
+bunny open --print --output json
+```
+
 ### `bunny config`
 
 Manage CLI configuration and profiles.
@@ -395,21 +409,52 @@ bunny scripts init --name my-script --type standalone --template Empty --deploy-
 
 # Non-interactive with GitHub Actions
 bunny scripts init --name my-script --type standalone --template Empty --deploy-method github --deploy
+
+# Use a custom template repo (GitHub owner/repo shorthand)
+bunny scripts init --repo owner/my-template
+
+# Use a custom template repo (full git URL)
+bunny scripts init --template-repo https://github.com/owner/my-template
 ```
 
-| Flag              | Description                                          |
-| ----------------- | ---------------------------------------------------- |
-| `--name`          | Project directory name                               |
-| `--type`          | Script type: `standalone` or `middleware`             |
-| `--template`      | Template name                                        |
-| `--deploy-method` | Deployment method: `github` or `cli`                 |
-| `--deploy`        | Create script on bunny.net after scaffolding         |
-| `--skip-git`      | Skip git initialization (CLI deploy method only)     |
-| `--skip-install`  | Skip dependency installation                         |
+| Flag                     | Description                                                           |
+| ------------------------ | --------------------------------------------------------------------- |
+| `--name`                 | Project directory name                                                |
+| `--type`                 | Script type: `standalone` or `middleware`                             |
+| `--template`             | Template name                                                         |
+| `--template-repo`, `--repo` | Git repository URL or GitHub `owner/repo` shorthand to use as template |
+| `--deploy-method`        | Deployment method: `github` or `cli`                                  |
+| `--deploy`               | Create script on bunny.net after scaffolding                          |
+| `--skip-git`             | Skip git initialization (CLI deploy method only)                      |
+| `--skip-install`         | Skip dependency installation                                          |
+
+When `--repo` / `--template-repo` is given without `--type`, the script type defaults to `standalone`.
 
 When choosing **GitHub Actions**, git is initialized automatically, GitHub-specific workflow files are kept, and after creating the script you'll be shown the `SCRIPT_ID` to add as a GitHub repo secret.
 
 When choosing **CLI**, the `.github/` and `.changeset/` directories are removed from the template and git initialization is skipped.
+
+#### `bunny scripts create`
+
+Create a new Edge Script on bunny.net (without scaffolding a project). Use this when you have an existing project — for example, you ran `bunny scripts init` without `--deploy` — and need a remote script before running `bunny scripts deploy`.
+
+```bash
+# Create using current directory name + link .bunny/script.json
+bunny scripts create
+
+# Explicit name and type
+bunny scripts create my-script --type middleware
+
+# Skip pull zone creation and directory linking
+bunny scripts create my-script --no-pull-zone --no-link
+```
+
+| Flag               | Description                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| `--type`           | Script type: `standalone` or `middleware` (defaults to manifest, prompts if interactive)    |
+| `--pull-zone`      | Create a linked pull zone (default: true). Use `--no-pull-zone` to skip.                   |
+| `--pull-zone-name` | Name for the linked pull zone                                                              |
+| `--link`           | Link this directory to the new script (default: true). Use `--no-link` to skip.            |
 
 #### `bunny scripts deploy`
 

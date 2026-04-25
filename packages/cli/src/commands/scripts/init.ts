@@ -1,18 +1,15 @@
 import { existsSync } from "node:fs";
 import { basename, resolve } from "node:path";
-import { createComputeClient } from "@bunny.net/api";
 import type { components } from "@bunny.net/api/generated/compute.d.ts";
 import prompts from "prompts";
-import { resolveConfig } from "../../config/index.ts";
-import { clientOptions } from "../../core/client-options.ts";
 import { defineCommand } from "../../core/define-command.ts";
 import { UserError } from "../../core/errors.ts";
 import { logger } from "../../core/logger.ts";
 import { saveManifestAt } from "../../core/manifest.ts";
-import { confirm, spinner } from "../../core/ui.ts";
+import { confirm, openBrowser, spinner } from "../../core/ui.ts";
 import { SCRIPT_MANIFEST, TEMPLATES, type Template } from "./constants.ts";
+import { createScript } from "./create.ts";
 
-type EdgeScript = components["schemas"]["EdgeScriptModel"];
 type EdgeScriptTypes = components["schemas"]["EdgeScriptTypes"];
 
 const COMMAND = "init";
@@ -25,7 +22,9 @@ const ARG_TYPE_DESCRIPTION = "Script type";
 const ARG_TEMPLATE = "template";
 const ARG_TEMPLATE_DESCRIPTION = "Template name";
 const ARG_TEMPLATE_REPO = "template-repo";
-const ARG_TEMPLATE_REPO_DESCRIPTION = "Git repository URL to use as template";
+const ARG_TEMPLATE_REPO_ALIAS = "repo";
+const ARG_TEMPLATE_REPO_DESCRIPTION =
+  "Git repository URL or GitHub owner/repo shorthand to use as template";
 const ARG_DEPLOY = "deploy";
 const ARG_DEPLOY_DESCRIPTION = "Deploy after creation";
 const ARG_DEPLOY_METHOD = "deploy-method";
@@ -49,6 +48,12 @@ interface InitArgs {
   [ARG_SKIP_INSTALL]?: boolean;
 }
 
+const GITHUB_SHORTHAND = /^[\w.-]+\/[\w.-]+$/;
+
+function resolveTemplateRepo(input: string): string {
+  return GITHUB_SHORTHAND.test(input) ? `https://github.com/${input}` : input;
+}
+
 /**
  * Create a new Edge Script project from a template.
  *
@@ -70,8 +75,11 @@ interface InitArgs {
  * # Skip dependency installation
  * bunny scripts init --name my-script --skip-install
  *
- * # Use a custom template repo
+ * # Use a custom template repo (full URL)
  * bunny scripts init --name my-script --type standalone --template-repo https://github.com/user/my-template
+ *
+ * # Use a custom template repo (GitHub owner/repo shorthand)
+ * bunny scripts init --repo user/my-template
  * ```
  */
 export const scriptsInitCommand = defineCommand<InitArgs>({
@@ -102,6 +110,7 @@ export const scriptsInitCommand = defineCommand<InitArgs>({
       })
       .option(ARG_TEMPLATE_REPO, {
         type: "string",
+        alias: ARG_TEMPLATE_REPO_ALIAS,
         describe: ARG_TEMPLATE_REPO_DESCRIPTION,
       })
       .option(ARG_DEPLOY, {
@@ -150,6 +159,9 @@ export const scriptsInitCommand = defineCommand<InitArgs>({
     let scriptType: EdgeScriptTypes | undefined;
     if (args[ARG_TYPE]) {
       scriptType = args[ARG_TYPE] === "standalone" ? 1 : 2;
+    } else if (args[ARG_TEMPLATE_REPO]) {
+      // Custom template repo implies the user knows what they're doing — default to standalone
+      scriptType = 1;
     } else {
       const { value } = await prompts({
         type: "select",
@@ -179,7 +191,7 @@ export const scriptsInitCommand = defineCommand<InitArgs>({
       selected = {
         name: "Custom",
         description: "Custom template repository",
-        repo: args[ARG_TEMPLATE_REPO],
+        repo: resolveTemplateRepo(args[ARG_TEMPLATE_REPO]),
         scriptType: finalScriptType,
       };
     } else if (args[ARG_TEMPLATE]) {
@@ -372,7 +384,7 @@ export const scriptsInitCommand = defineCommand<InitArgs>({
 
     // Step 9: Create script on bunny.net + link
     let deployResult:
-      | (Pick<EdgeScript, "Id" | "Name"> & { hostname?: string })
+      | { id: number; name: string; hostname?: string }
       | undefined;
 
     const deployPrompt =
@@ -388,42 +400,49 @@ export const scriptsInitCommand = defineCommand<InitArgs>({
           : false;
 
     if (shouldDeploy) {
-      const config = resolveConfig(profile, apiKey);
-      const client = createComputeClient(clientOptions(config, verbose));
-      const scriptName = basename(dirPath);
+      try {
+        const created = await createScript({
+          profile,
+          apiKey,
+          verbose,
+          name: basename(dirPath),
+          scriptType: finalScriptType,
+          createLinkedPullZone: true,
+        });
 
-      const createSpin = spinner(`Creating script "${scriptName}"...`);
-      createSpin.start();
-
-      const { data: script } = await client.POST("/compute/script", {
-        body: {
-          Name: scriptName,
-          ScriptType: scriptType,
-          CreateLinkedPullZone: true,
-        },
-      });
-
-      createSpin.stop();
-
-      if (!script) {
-        logger.warn("Could not create script on bunny.net.");
-      } else {
-        logger.success(`Created script "${script.Name}" (ID: ${script.Id}).`);
+        logger.success(`Created script "${created.name}" (ID: ${created.id}).`);
 
         // Update manifest with remote ID
         saveManifestAt(dirPath, SCRIPT_MANIFEST, {
-          id: script.Id,
-          name: script.Name ?? undefined,
+          id: created.id,
+          name: created.name,
           scriptType,
         });
 
         deployResult = {
-          Id: script.Id,
-          Name: script.Name,
-          hostname: script.LinkedPullZones?.[0]?.DefaultHostname ?? undefined,
+          id: created.id,
+          name: created.name,
+          hostname: created.hostname,
         };
 
-        if (deployResult.hostname) {
+        if (
+          deployResult.hostname &&
+          output !== "json" &&
+          process.stdout.isTTY
+        ) {
+          const shouldOpen = await confirm("Open script in browser?");
+          if (shouldOpen) {
+            const url = deployResult.hostname.startsWith("http")
+              ? deployResult.hostname
+              : `https://${deployResult.hostname}`;
+            logger.dim(`  Opening ${url}`);
+            openBrowser(url);
+          } else {
+            logger.dim(
+              "  Make changes locally, then run `bunny scripts deploy <file>` to publish.",
+            );
+          }
+        } else if (deployResult.hostname) {
           logger.dim(`  URL: ${deployResult.hostname}`);
         }
 
@@ -432,8 +451,17 @@ export const scriptsInitCommand = defineCommand<InitArgs>({
           logger.info(
             "Before pushing to GitHub, add this secret to your repo:",
           );
-          logger.dim(`  SCRIPT_ID = ${script.Id}`);
+          logger.dim(`  SCRIPT_ID = ${created.id}`);
         }
+      } catch (err: any) {
+        logger.warn(
+          err?.message
+            ? `Could not create script on bunny.net: ${err.message}`
+            : "Could not create script on bunny.net.",
+        );
+        logger.dim(
+          "  Run `bunny scripts create` from the project directory to retry.",
+        );
       }
     }
 
@@ -451,8 +479,8 @@ export const scriptsInitCommand = defineCommand<InitArgs>({
             deployMethod,
             ...(deployResult && {
               script: {
-                id: deployResult.Id,
-                name: deployResult.Name,
+                id: deployResult.id,
+                name: deployResult.name,
                 hostname: deployResult.hostname,
               },
             }),
